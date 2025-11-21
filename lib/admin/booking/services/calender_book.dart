@@ -4,9 +4,9 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../public/config.dart';
-import 'room_booking_page.dart';
+import 'book/room_booking_page.dart';
 import '../../../public/main_navigation.dart';
-import 'prebooking_page.dart';
+import 'book/prebooking_page.dart';
 
 const Color royalblue = Color(0xFF376EA1);
 const Color royal = Color(0xFF19527A);
@@ -552,11 +552,44 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                     if (selected.isNotEmpty) {
                       Navigator.of(parentContext).pop(); // close first dialog
 
-                      _showBookingTypeDialog(
-                        parentContext,
-                        room,
-                        selected,
-                      );
+                      // Determine if booking is today
+                      DateTime today = DateTime.now();
+
+                      bool isToday =
+                          checkIn!.year == today.year &&
+                              checkIn!.month == today.month &&
+                              checkIn!.day == today.day;
+
+                      Navigator.of(parentContext).pop(); // close dialog
+
+                      if (isToday) {
+                        // 👉 BOOK
+                        Navigator.of(parentContext).push(
+                          MaterialPageRoute(
+                            builder: (_) => RoomBookingPage(
+                              roomType: room['room_type'],
+                              roomName: room['room_name'],
+                              availableRooms: selected,  // selected
+                              checkIn: checkIn!,
+                              checkOut: checkOut!,
+                            ),
+                          ),
+                        );
+                      } else {
+                        // 👉 PRE-BOOK
+                        Navigator.of(parentContext).push(
+                          MaterialPageRoute(
+                            builder: (_) => PreBookingPage(
+                              roomType: room['room_type'],
+                              roomName: room['room_name'],
+                              availableRooms: selected, // selected
+                              checkIn: checkIn!,
+                              checkOut: checkOut!,
+                            ),
+                          ),
+                        );
+                      }
+
                     }
                   },
                   child: const Text("OK"),
@@ -683,7 +716,7 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: royal,
-        title: const Text("Lodge Booking",
+        title: const Text("Room Booking",
             style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [

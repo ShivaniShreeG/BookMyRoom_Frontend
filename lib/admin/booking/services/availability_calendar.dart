@@ -566,7 +566,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: royal,
-        title: const Text("Lodge Booking",
+        title: const Text("Date Availability",
             style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [

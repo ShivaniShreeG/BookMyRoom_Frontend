@@ -4,18 +4,20 @@ import 'package:frontend/admin/booking/services/calender_book.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../public/config.dart';
-import 'booking/calendar_page.dart';
-import 'booking/upcoming_events.dart';
-import 'booking/booking_history.dart';
-import 'booking/services/room_booking_page.dart';
-import 'booking/cancel_history.dart';
+import 'booking/services/check_in/checkin.dart';
+import 'booking/services/upcoming/upcoming_bookings.dart';
+import 'booking/services/history/booking_history.dart';
+import 'booking/services/charges_for_booking.dart';
+import 'booking/services/cancel/cancel.dart';
+import 'booking/services/billing/billing.dart';
 import 'booking/services/availability_calendar.dart';
 import 'booking/services/view_facilitator.dart';
-import 'booking/add_income_page.dart';
-import 'booking/add_expense.dart';
-import 'booking/view_finance.dart';
-import 'booking/reports.dart';
-import 'booking/add_drawing.dart';
+import 'booking/accounts/add_income_page.dart';
+import 'booking/accounts/add_expense.dart';
+import 'booking/accounts/view_finance.dart';
+import 'booking/accounts/reports.dart';
+import 'booking/accounts/add_drawing.dart';
+import 'booking/services/history/cancel_history.dart';
 
 const Color royalblue = Color(0xFF376EA1);
 const Color royal = Color(0xFF19527A);
@@ -269,10 +271,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   icon: Icons.list_alt,
                   label: "Add Income",
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => const AddIncomePage()),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddIncomePage()),
+                    );
                   },
                   size: buttonSize,
                 ),
@@ -280,10 +282,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   icon: Icons.add_chart,
                   label: "Add Expense ",
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => const AddExpensePage()),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddExpensePage()),
+                    );
                   },
                   size: buttonSize,
                 ),
@@ -291,10 +293,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   icon: Icons.add_to_photos,
                   label: "Add Drawing",
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => AddDrawingPage()),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => AddDrawingPage()),
+                    );
                   },
                   size: buttonSize,
                 ),
@@ -303,10 +305,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   icon: Icons.analytics,
                   label: "View Finance",
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => const ViewFinancePage()),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ViewFinancePage()),
+                    );
                   },
                   size: buttonSize,
                 ),
@@ -389,7 +391,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final List<Map<String, dynamic>> actions = [
       {
         "icon": Icons.event_available,
-        "label": "Lodge Booking",
+        "label": "Room Booking",
         "onTap": () {
           Navigator.push(
             context,
@@ -400,39 +402,61 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
       },
       {
-        "icon": Icons.cancel,
-        "label": "Cancel Booking",
+        "icon": Icons.check_circle,
+        "label": "Check In",
         "onTap": () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => CalendarPage(mode: CalendarMode.cancel),
-          //   ),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PreBookedListPage(),
+            ),
+          );
         }
       },
       {
-        "icon": Icons.edit_calendar,
+        "icon": Icons.change_circle_outlined,
         "label": "Date Changing",
         "onTap": () {
           // Navigator.push(
           //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => CalendarPage(mode: CalendarMode.update),
-          //   ),
+          //   MaterialPageRoute(builder: (context) => CancelHistoryPage()),
           // );
+        }
+      },
+      {
+        "icon": Icons.cancel,
+        "label": "Cancel Booking",
+        "onTap": () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CancelBookedPage(),
+            ),
+          );
+        }
+      },
+      {
+        "icon": Icons.add_box,
+        "label": "Add Charges",
+        "onTap": () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddChargesPage(),
+            ),
+          );
         }
       },
       {
         "icon": Icons.receipt_long,
         "label": "Billing",
         "onTap": () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => CalendarPage(mode: CalendarMode.bill),
-          //   ),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookingsListPage(),
+            ),
+          );
         }
       },
       {
@@ -456,23 +480,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
       //   }
       // },
       {
-        "icon": Icons.history,
-        "label": "Booking History",
+        "icon": Icons.work_history_outlined,
+        "label": "Upcoming Booking",
         "onTap": () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => BookingHistoryPage()),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => UpcomingBookingsPage()),
+          );
         }
       },
       {
-        "icon": Icons.cancel_presentation,
+        "icon": Icons.history,
+        "label": "Booking History",
+        "onTap": () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => BookingsHistoryPage()),
+          );
+        }
+      },
+      {
+        "icon": Icons.free_cancellation,
         "label": "Cancellation History",
         "onTap": () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => CancelHistoryPage()),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => CancelHistoryPage()),
+          );
         }
       },
       {
