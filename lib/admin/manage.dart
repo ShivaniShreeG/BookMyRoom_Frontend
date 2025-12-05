@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'manage/owner_manage.dart';  // ✅ import the real OwnerPage
+import 'manage/owner_manage.dart';
 import 'manage/other_manage.dart';
 
 class AdminManagePage extends StatefulWidget {
@@ -23,8 +23,6 @@ class _AdminManagePageState extends State<AdminManagePage> {
   Future<void> _loadDesignation() async {
     final prefs = await SharedPreferences.getInstance();
     final savedDesignation = prefs.getString('designation') ?? '';
-    // print('Saved designation from SharedPreferences: $savedDesignation');
-
 
     setState(() {
       designation = savedDesignation.trim().toLowerCase();
@@ -43,7 +41,7 @@ class _AdminManagePageState extends State<AdminManagePage> {
     }
 
     if (designation == 'owner') {
-      return const OwnerPage(); // ✅ use imported OwnerPage
+      return const OwnerPage();
     } else {
       return const OtherManagePage();
     }

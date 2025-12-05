@@ -19,7 +19,6 @@ class DefaultValuesPage extends StatefulWidget {
 class _DefaultValuesPageState extends State<DefaultValuesPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
   final _reasonController = TextEditingController();
   final _amountController = TextEditingController();
   final _customReasonController = TextEditingController();
@@ -31,12 +30,11 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
 
   String? _selectedReason;
   bool _showCustomReasonField = false;
-  String? _selectedType; // 👈 new variable
-
+  String? _selectedType;
   List<Map<String, dynamic>> _defaultValues = [];
   Map<String, dynamic>? lodgeDetails;
-  List<Map<String, dynamic>> rentEntries = []; // multiple rent defaults
-  List<Map<String, dynamic>> roomOptions = []; // from rooms table
+  List<Map<String, dynamic>> rentEntries = [];
+  List<Map<String, dynamic>> roomOptions = [];
   bool _showRoomDropdown = false;
   Map<String, dynamic>? _selectedRoom;
 
@@ -74,8 +72,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
     if (lodgeId != null) {
-      await _fetchLodge(lodgeId); // fetch hall info
-      await _fetchDefaultValues();// fetch admins
+      await _fetchLodge(lodgeId);
+      await _fetchDefaultValues();
       await _fetchRooms(lodgeId);
     }
   }
@@ -91,7 +89,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching rooms: $e");
+      _showMessage("❌ Error fetching rooms: $e");
     }
   }
 
@@ -111,7 +109,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching default amount: $e");
+      _showMessage("❌ Error fetching default amount: $e");
     } finally {
       setState(() => isLoadingDefaults = false);
     }
@@ -133,7 +131,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
     }
 
     try {
-      // Handle custom reason capitalization
       if (_showCustomReasonField) {
         String custom = _customReasonController.text.trim();
         if (custom.isNotEmpty) {
@@ -151,7 +148,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
 
       http.Response response;
       if (_editingDefaultId == null) {
-        // ➕ CREATE
         final url = Uri.parse("$baseUrl/default-values");
         response = await http.post(
           url,
@@ -159,7 +155,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
           body: jsonEncode(body),
         );
       } else {
-        // ✏️ UPDATE
         final url = Uri.parse("$baseUrl/default-values/$_editingDefaultId/$lodgeId");
         response = await http.patch(
           url,
@@ -181,15 +176,15 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
             int index = _defaultValues.indexWhere((d) => d["id"] == result["id"]);
             if (index != -1) _defaultValues[index] = result;
           }
-
+          _fetchDefaultValues();
           _resetForm();
+
         });
       } else {
         _showMessage("❌ Failed to save: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error submitting default value: $e");
-      _showMessage("❌ Error submitting default value");
+      _showMessage("❌ Error submitting default value: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -211,8 +206,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
         _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting default value: $e");
-      _showMessage("❌ Error deleting default value");
+      _showMessage("❌ Error deleting default value: $e");
     }
   }
 
@@ -224,8 +218,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: royal, // your border color
-            width: 1.5,   // border thickness
+            color: royal,
+            width: 1.5,
           ),
         ),
         title: Text("Delete Default Amount", style: TextStyle(color: royal)),
@@ -256,10 +250,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
       _editingDefaultId = d["id"];
       _amountController.text = d["amount"]?.toString() ?? "";
 
-      // Set TYPE
-      _selectedType = d["type"]; // ✅ set type for edit
+      _selectedType = d["type"];
 
-      // Determine if reason matches dropdown or custom
       if (d["reason"] != null && d["reason"]!.startsWith("Rent")) {
         _selectedReason = "Rent";
         _showCustomReasonField = false;
@@ -270,10 +262,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
               (room) =>
           d["reason"]!.contains(room['room_name'] ?? '') &&
               d["reason"]!.contains(room['room_type'] ?? ''),
-          orElse: () => roomOptions.first, // safe: always returns a Map
-        )
-            : {}; // empty Map if no rooms available
-
+          orElse: () => roomOptions.first,
+        ) : {};
 
         final roomName = _selectedRoom?['room_name'] ?? 'null';
         final roomType = _selectedRoom?['room_type'] ?? 'null';
@@ -329,7 +319,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
           key: _formKey,
           child: Column(
             children: [
-              // 🔹 TYPE Dropdown
               labeledTanRow(
                 label: "TYPE",
                 child: DropdownButtonFormField<String>(
@@ -384,8 +373,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
 
               const SizedBox(height: 10),
 
-              // 🔹 REASON Dropdown
-              // 🔹 REASON Dropdown
               labeledTanRow(
                 label: "REASON",
                 child: DropdownButtonFormField<String>(
@@ -393,29 +380,23 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                   dropdownColor: Colors.white,
                   style: TextStyle(color: royal),
                   iconEnabledColor: royal,
-                  hint: Text(
-                    "Select Reason",
-                    style: TextStyle(color: royal),
-                  ),
+                  hint: Text("Select Reason", style: TextStyle(color: royal)),
                   items: [
-                    DropdownMenuItem(
-                        value: "Rent",
-                        child: Text("Rent", style: TextStyle(color: royal))),
-                    DropdownMenuItem(
-                        value: "Cancel",
-                        child: Text("Cancel", style: TextStyle(color: royal))),
-                    DropdownMenuItem(
-                        value: "Other",
-                        child: Text("Other", style: TextStyle(color: royal))),
-                  ],
+                    "Rent",
+                    "Cancel",
+                    "Other",
+                    if (_selectedType == "Default") "GST",
+                  ].map((reason) => DropdownMenuItem(
+                    value: reason,
+                    child: Text(reason, style: TextStyle(color: royal)),
+                  )).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedReason = value;
                       _showCustomReasonField = value == "Other";
-                      _showRoomDropdown = value == "Rent"; // ✅ show room dropdown
+                      _showRoomDropdown = value == "Rent";
 
                       if (_showRoomDropdown) {
-                        // Reset selected room
                         _selectedRoom = roomOptions.isNotEmpty ? roomOptions.first : null;
                         if (_selectedRoom != null) {
                           _reasonController.text = "Rent (${_selectedRoom!['room_name']} (${_selectedRoom!['room_type']}))";
@@ -427,7 +408,9 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                   },
                   validator: (value) =>
                   _showCustomReasonField ? null : value == null ? "Select reason" : null,
-                  decoration: InputDecoration(border: InputBorder.none, isDense: true,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
                     filled: true,
                     fillColor: royalLight.withValues(alpha: 0.13),
                     enabledBorder: OutlineInputBorder(
@@ -449,11 +432,12 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                   ),
                 ),
               ),
-            if (_showRoomDropdown && roomOptions.isNotEmpty)
+
+              if (_showRoomDropdown && roomOptions.isNotEmpty)
               labeledTanRow(
                 label: "ROOM",
                 child: DropdownButtonFormField<Map<String, dynamic>>(
-                  isExpanded: true, // ✅ important: makes dropdown take all available width
+                  isExpanded: true,
                   initialValue: _selectedRoom,
                   dropdownColor: Colors.white,
                   style: TextStyle(color: royal),
@@ -467,7 +451,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                       child: Text(
                         "$roomName ($roomType)",
                         style: TextStyle(color: royal),
-                        overflow: TextOverflow.ellipsis, // truncate if too long
+                        overflow: TextOverflow.ellipsis,
                       ),
                     );
                   }).toList(),
@@ -486,7 +470,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                     border: InputBorder.none,
                     isDense: true,
                     filled: true,
-                    fillColor: royalLight.withAlpha(33), // equivalent to alpha: 0.13
+                    fillColor: royalLight.withAlpha(33),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: royal, width: 1),
                       borderRadius: BorderRadius.circular(12),
@@ -507,7 +491,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                 ),
               ),
 
-              // 🔹 Custom Reason Text Field
               if (_showCustomReasonField)
                 labeledTanRow(
                   label: "",
@@ -544,16 +527,25 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                   ),
                 ),
 
-              // 🔹 Amount Text Field
               labeledTanRow(
-                label: "AMOUNT",
+                label: (_selectedReason == "GST" || _selectedReason == "Cancel")
+                    ? "PERCENTAGE (%)"
+                    : "AMOUNT",
                 child: TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.number,
                   cursorColor: royal,
                   style: TextStyle(color: royal),
-                  validator: (value) =>
-                  value == null || value.isEmpty ? "Enter amount" : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return "Enter amount";
+                    final doubleAmount = double.tryParse(value);
+                    if (doubleAmount == null) return "Enter valid number";
+
+                    if (_selectedReason == "GST" || _selectedReason == "Cancel") {
+                      if (doubleAmount > 100) return "Amount cannot exceed 100 for GST/Cancel";
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: "Enter Default Amount",
@@ -583,7 +575,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
 
               const SizedBox(height: 20),
 
-              // 🔹 Action Buttons
               Row(
                 children: [
                   Expanded(
@@ -594,11 +585,11 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                       ),
                       onPressed: _isLoading ? null : _submitDefaultValue,
                       child: _isLoading
-                          ? CircularProgressIndicator(color: Colors.white)
+                          ? CircularProgressIndicator(color: royal)
                           : Text(
                         _editingDefaultId == null
-                            ? "Add Default Amount"
-                            : "Update Default Amount",
+                            ? "Submit"
+                            : "Submit",
                       ),
                     ),
                   ),
@@ -630,12 +621,11 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center, // ✅ vertically center the row
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Label
           Container(
             width: screenWidth * labelWidthFactor,
-            alignment: Alignment.centerLeft, // ✅ vertically center, keep left aligned
+            alignment: Alignment.centerLeft,
             child: Text(
               label,
               style: TextStyle(
@@ -645,8 +635,6 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
             ),
           ),
           const SizedBox(width: 10),
-
-          // Value/Input takes remaining width
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -672,7 +660,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
         lodgeDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      // print("Error fetching hall details: $e");
+      _showMessage("Error fetching hall details: $e");
     } finally {
       setState(() {});
     }
@@ -684,8 +672,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: royal, // your border color
-          width: 1.5,   // border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -708,9 +696,8 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                     d["reason"] ?? "-",
                     style: TextStyle(color: royal, fontWeight: FontWeight.bold),
                   ),
-                  // Show percentage if reason is Cancel, else amount
                   Text(
-                    d["reason"] == "Cancel"
+                    d["reason"] == "Cancel" || d["reason"] == "GST"
                         ? "Percentage: ${d["amount"] ?? "-"}%"
                         : "Amount: ${d["amount"] ?? "-"}",
                     style: TextStyle(color: royal),
@@ -767,7 +754,7 @@ class _DefaultValuesPageState extends State<DefaultValuesPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,

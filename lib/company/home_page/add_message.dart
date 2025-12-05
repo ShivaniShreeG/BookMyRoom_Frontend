@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../public/config.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class HallMessagesPage extends StatefulWidget {
   final dynamic hall;
 
@@ -13,13 +17,34 @@ class HallMessagesPage extends StatefulWidget {
 }
 
 class _HallMessagesPageState extends State<HallMessagesPage> {
-  final Color primaryColor = const Color(0xFF5B6547);
-  final Color backgroundColor = const Color(0xFFD8C9A9);
-  final Color surfaceColor = const Color(0xFFECE5D8);
-
+  
   bool _isLoading = true;
   List<dynamic> _messages = [];
   String? _errorMessage;
+
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -27,7 +52,6 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
     _fetchMessages();
   }
 
-  // 📩 Fetch all messages for this hall
   Future<void> _fetchMessages() async {
     setState(() {
       _isLoading = true;
@@ -36,7 +60,7 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/message/hall/${widget.hall['hall_id']}'),
+        Uri.parse('$baseUrl/message/lodge/${widget.hall['lodge_id']}'),
       );
 
       if (response.statusCode == 200) {
@@ -47,23 +71,21 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
         });
       } else {
         setState(() {
-          _errorMessage =
-          "Failed to load messages (Code: ${response.statusCode})";
+          _showMessage("Failed to load messages (Code: ${response.statusCode})");
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "Error fetching messages: $e";
+        _showMessage("Error fetching messages: $e");
         _isLoading = false;
       });
     }
   }
 
-  // ➕ Add a new message
   Future<void> _addMessage(String message) async {
     final body = jsonEncode({
-      'hall_id': widget.hall['hall_id'],
+      'lodge_id': widget.hall['lodge_id'],
       'message': message,
     });
 
@@ -77,14 +99,13 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
       if (response.statusCode == 201) {
         _fetchMessages();
       } else {
-        _showSnackBar("Failed to add message (${response.statusCode})", true);
+        _showMessage("Failed to add message (${response.statusCode})");
       }
     } catch (e) {
-      _showSnackBar("Error adding message: $e", true);
+      _showMessage("Error adding message: $e");
     }
   }
 
-  // 📝 Edit message text (message_id remains same)
   Future<void> _editMessage(int messageId, String newText) async {
     try {
       final response = await http.patch(
@@ -96,14 +117,13 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
       if (response.statusCode == 200) {
         _fetchMessages();
       } else {
-        _showSnackBar("Failed to edit message (${response.statusCode})", true);
+        _showMessage("Failed to edit message (${response.statusCode})");
       }
     } catch (e) {
-      _showSnackBar("Error editing message: $e", true);
+      _showMessage("Error editing message: $e");
     }
   }
 
-  // ❌ Delete message
   Future<void> _deleteMessage(int messageId) async {
     try {
       final response = await http.delete(
@@ -113,42 +133,43 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
       if (response.statusCode == 200) {
         _fetchMessages();
       } else {
-        _showSnackBar("Failed to delete message (${response.statusCode})", true);
+        _showMessage("Failed to delete message (${response.statusCode})");
       }
     } catch (e) {
-      _showSnackBar("Error deleting message: $e", true);
+      _showMessage("Error deleting message: $e");
     }
   }
 
-  void _showSnackBar(String message, bool isError) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
-  }
-
-  // 🧾 Dialog to add or edit message
   Future<void> _showMessageDialog({String? existingText, int? messageId}) async {
     final controller = TextEditingController(text: existingText ?? '');
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: surfaceColor,
+        backgroundColor: Colors.white,
         title: Text(
           existingText == null ? "Add Message" : "Edit Message",
-          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+          style: TextStyle(color: royal, fontWeight: FontWeight.bold),
         ),
         content: TextField(
           controller: controller,
+          cursorColor: royal,
+          style: TextStyle(color: royal),
           maxLines: 3,
           decoration: InputDecoration(
             hintText: "Enter your message...",
+            hintStyle: TextStyle(color: royal),
             filled: true,
-            fillColor: backgroundColor,
+            fillColor: royalLight.withValues(alpha: 0.03),
             border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: royal, width: 1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: royal, width: 2),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -156,12 +177,12 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Cancel", style: TextStyle(color: primaryColor)),
+            child: Text("Cancel", style: TextStyle(color: royal)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: backgroundColor,
+              backgroundColor: royal,
+              foregroundColor: Colors.white,
             ),
             onPressed: () {
               final text = controller.text.trim();
@@ -183,14 +204,14 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: surfaceColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: royal,
         title: Text(
           "Messages - ${widget.hall['name']}",
-          style: TextStyle(color: backgroundColor),
+          style: TextStyle(color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: backgroundColor),
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -199,24 +220,24 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: primaryColor,
+        backgroundColor: royal,
         onPressed: () => _showMessageDialog(),
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: royal,))
           : _errorMessage != null
           ? Center(
         child: Text(
           _errorMessage!,
-          style: TextStyle(color: primaryColor),
+          style: TextStyle(color: royal),
         ),
       )
           : _messages.isEmpty
           ? Center(
         child: Text(
           "No messages for this hall yet.",
-          style: TextStyle(color: primaryColor),
+          style: TextStyle(color: royal),
         ),
       )
           : ListView.builder(
@@ -225,23 +246,23 @@ class _HallMessagesPageState extends State<HallMessagesPage> {
         itemBuilder: (context, index) {
           final msg = _messages[index];
           return Card(
-            color: backgroundColor,
+            color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: primaryColor, width: 1),
+              side: BorderSide(color: royal, width: 1),
             ),
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               title: Text(
                 msg['message'] ?? 'No content',
-                style: TextStyle(color: primaryColor),
+                style: TextStyle(color: royal),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit),
-                    color: primaryColor,
+                    color: royal,
                     onPressed: () => _showMessageDialog(
                       existingText: msg['message'],
                       messageId: msg['id'],

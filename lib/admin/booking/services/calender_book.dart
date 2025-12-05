@@ -29,6 +29,8 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
   bool loadingRooms = false;
   List<dynamic> availableRooms = [];
   Map<String, dynamic>? hallDetails;
+  Set<int> expandedCards = {};
+  Map<String, Set<String>> selectedRooms = {};
 
   @override
   void initState() {
@@ -79,7 +81,7 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -140,7 +142,7 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -181,14 +183,14 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
         return Theme(
           data: theme.copyWith(
             colorScheme: const ColorScheme.light(
-              primary: royal,        // header & selected date
+              primary: royal,
               onPrimary: Colors.white,
               onSurface: royal,
             ),
 
             inputDecorationTheme: InputDecorationTheme(
-              filled: false,                          // prevents royal fill
-              fillColor: Colors.transparent,          // must be transparent
+              filled: false,
+              fillColor: Colors.transparent,
 
               focusedBorder: OutlineInputBorder(
                 borderSide: const BorderSide(color: royal, width: 2),
@@ -318,7 +320,6 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     );
   }
 
-  // Format 12-hour AM/PM
   String formatDateTime12(DateTime dt) {
     final hour = dt.hour > 12 ? dt.hour - 12 : dt.hour == 0 ? 12 : dt.hour;
     final minute = dt.minute.toString().padLeft(2, '0');
@@ -332,9 +333,19 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     DateTime? tempIn;
     DateTime? tempOut;
 
-    tempIn = DateTime(selected.year, selected.month, selected.day, 18, 0);
-    final nextDay = selected.add(const Duration(days: 1));
-    tempOut = DateTime(nextDay.year, nextDay.month, nextDay.day, 18, 0);
+    DateTime now = DateTime.now();
+
+    bool isToday = selected.year == now.year &&
+        selected.month == now.month &&
+        selected.day == now.day;
+
+    if (isToday) {
+      tempIn = now;
+      tempOut = now.add(const Duration(hours: 24));
+    } else {
+      tempIn = DateTime(selected.year, selected.month, selected.day, 18, 0);
+      tempOut = tempIn.add(const Duration(hours: 24));
+    }
 
     final result = await showDialog(
       context: context,
@@ -356,97 +367,77 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ---- Check-In Label ----
-                  const Text(
-                    "Check-In",
-                    style: TextStyle(
-                      color: royal,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  const Text("Check-In",
+                      style: TextStyle(
+                          color: royal,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
                   const SizedBox(height: 6),
 
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: royal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
                     ),
                     onPressed: () async {
                       final dt = await _pickDateTime(tempIn!);
-                      if (dt != null) update(() => tempIn = dt);
+                      if (dt != null) {
+                        update(() {
+                          tempIn = dt;
+                          tempOut = tempIn!.add(const Duration(hours: 24));
+                        });
+                      }
                     },
                     child: Text(
-                      formatDateTime12(tempIn!),   // only date-time
+                      formatDateTime12(tempIn!),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
 
                   const SizedBox(height: 18),
 
-                  const Text(
-                    "Check-Out",
-                    style: TextStyle(
-                      color: royal,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  const Text("Check-Out",
+                      style: TextStyle(
+                          color: royal,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
                   const SizedBox(height: 6),
 
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: royal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
                     ),
                     onPressed: () async {
                       final dt = await _pickDateTime(tempOut!);
-                      if (dt != null) update(() => tempOut = dt);
+                      if (dt != null) {
+                        update(() {
+                          if (dt.isBefore(tempIn!)) {
+                            tempOut = tempIn!.add(const Duration(hours: 1));
+                          } else {
+                            tempOut = dt;
+                          }
+                        });
+                      }
                     },
                     child: Text(
-                      formatDateTime12(tempOut!),  // only date-time
+                      formatDateTime12(tempOut!),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
+
+                  const SizedBox(height: 6),
                 ],
               ),
 
-              actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-
               actions: [
                 TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: royal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  style: TextButton.styleFrom(backgroundColor: royal),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                  child: const Text("Cancel", style: TextStyle(color: Colors.white)),
                 ),
-
-
                 TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: royal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  style: TextButton.styleFrom(backgroundColor: royal),
                   onPressed: () => Navigator.pop(context, "OK"),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                  child: const Text("OK", style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -465,241 +456,90 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     }
   }
 
-  void _selectRoomNumbers(dynamic room) {
-    final parentContext = context; // ← important for navigation
+  Widget _buildRoomCard(int index, dynamic room) {
+    final key = "${room['room_type']}-${room['room_name']}";
+    final allNumbers = List<String>.from(room['all_room_numbers'] ?? []);
+    final availableNumbers = Set<String>.from(room['available_rooms'] ?? []);
+    final selectedNumbers = selectedRooms[key] ?? {};
 
-    final List<String> allNumbers =
-    List<String>.from(room['all_room_numbers'] ?? []);
-    final Set<String> availableNumbers =
-    Set<String>.from(room['available_rooms'] ?? []);
+    bool isExpanded = expandedCards.contains(index);
 
-    final selected = <String>[];
-
-    showDialog(
-      context: parentContext,
-      builder: (_) {
-        return StatefulBuilder(
-          builder: (dialogContext, update) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: royal, width: 1),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(
+              "${room['room_type']} - ${room['room_name']}",
+              style: const TextStyle(
+                color: royal,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-
-              title: Center(
-                child: Text(
-                  "Select Rooms (${room['room_type']} - ${room['room_name']})",
-                  style: const TextStyle(
-                    color: royal,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-
-              content: SizedBox(
-                width: double.maxFinite,
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: allNumbers.map((n) {
-                    final bool isAvailable = availableNumbers.contains(n);
-                    final bool isSelected = selected.contains(n);
-
-                    return ChoiceChip(
-                      label: Text(n),
-                      selected: isSelected,
-                      selectedColor: royal,
-                      disabledColor: Colors.grey.shade300,
-                      labelStyle: TextStyle(
-                        color: isAvailable
-                            ? (isSelected ? Colors.white : royal)
-                            : royal,
-                      ),
-                      checkmarkColor: Colors.white,
-                      side: BorderSide(color: royal),
-                      onSelected: isAvailable
-                          ? (_) {
-                        update(() {
-                          isSelected
-                              ? selected.remove(n)
-                              : selected.add(n);
-                        });
-                      }
-                          : null,
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              actionsAlignment: MainAxisAlignment.center,
-              actions: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: royal,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(parentContext).pop(),
-                  child: const Text("Cancel"),
-                ),
-
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: royal,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    if (selected.isNotEmpty) {
-                      Navigator.of(parentContext).pop(); // close first dialog
-
-                      // Determine if booking is today
-                      DateTime today = DateTime.now();
-
-                      bool isToday =
-                          checkIn!.year == today.year &&
-                              checkIn!.month == today.month &&
-                              checkIn!.day == today.day;
-
-                      Navigator.of(parentContext).pop(); // close dialog
-
-                      if (isToday) {
-                        // 👉 BOOK
-                        Navigator.of(parentContext).push(
-                          MaterialPageRoute(
-                            builder: (_) => RoomBookingPage(
-                              roomType: room['room_type'],
-                              roomName: room['room_name'],
-                              availableRooms: selected,  // selected
-                              checkIn: checkIn!,
-                              checkOut: checkOut!,
-                            ),
-                          ),
-                        );
-                      } else {
-                        // 👉 PRE-BOOK
-                        Navigator.of(parentContext).push(
-                          MaterialPageRoute(
-                            builder: (_) => PreBookingPage(
-                              roomType: room['room_type'],
-                              roomName: room['room_name'],
-                              availableRooms: selected, // selected
-                              checkIn: checkIn!,
-                              checkOut: checkOut!,
-                            ),
-                          ),
-                        );
-                      }
-
-                    }
-                  },
-                  child: const Text("OK"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showBookingTypeDialog(
-      BuildContext parentContext,
-      dynamic room,
-      List<String> selectedRooms,
-      ) {
-    showDialog(
-      context: parentContext,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        title: const Text(
-          "Choose Action",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: royal,
+            ),
+            subtitle: Text(
+              "Available: ${room['available_rooms'].length} / ${room['total_rooms']}",
+              style: TextStyle(color: royal),
+            ),
+            trailing: Icon(
+              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: royal,
+            ),
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  expandedCards.remove(index);
+                } else {
+                  expandedCards.add(index);
+                }
+              });
+            },
           ),
-        ),
-        content: const Text(
-          "Would you like to Book or Pre-Book the selected rooms?",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: royal),
-        ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: allNumbers.map((n) {
+                  final isAvailable = availableNumbers.contains(n);
+                  final isSelected = selectedNumbers.contains(n);
 
-        // Remove default actions so we can use a Column layout
-        actions: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // FIRST ROW (Pre-book & Book)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: royal,
-                      foregroundColor: Colors.white,
+                  return ChoiceChip(
+                    label: Text(n),
+                    selected: isSelected,
+                    selectedColor: royal,
+                    disabledColor: Colors.grey.shade300,
+                    labelStyle: TextStyle(
+                      color: isAvailable
+                          ? (isSelected ? Colors.white : royal)
+                          : royal,
                     ),
-                    child: const Text("Pre-Book"),
-                    onPressed: () {
-                      Navigator.of(parentContext).pop();
-                      Navigator.of(parentContext).push(
-                        MaterialPageRoute(
-                          builder: (_) => PreBookingPage(
-                            roomType: room['room_type'],
-                            roomName: room['room_name'],
-                            availableRooms: selectedRooms,
-                            checkIn: checkIn!,
-                            checkOut: checkOut!,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: royal,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text("Book"),
-                    onPressed: () {
-                      Navigator.of(parentContext).pop();
-                      Navigator.of(parentContext).push(
-                        MaterialPageRoute(
-                          builder: (_) => RoomBookingPage(
-                            roomType: room['room_type'],
-                            roomName: room['room_name'],
-                            availableRooms: selectedRooms,
-                            checkIn: checkIn!,
-                            checkOut: checkOut!,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                    checkmarkColor: Colors.white,
+                    side: BorderSide(color: royal),
+                    onSelected: isAvailable
+                        ? (_) {
+                      setState(() {
+                        if (!selectedRooms.containsKey(key)) {
+                          selectedRooms[key] = {};
+                        }
+                        if (isSelected) {
+                          selectedRooms[key]!.remove(n);
+                        } else {
+                          selectedRooms[key]!.add(n);
+                        }
+                      });
+                    }
+                        : null,
+                  );
+                }).toList(),
               ),
-
-              const SizedBox(height: 15),
-
-              // SECOND ROW (Cancel centered)
-              Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: royal,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(parentContext).pop(),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          )
+            ),
         ],
       ),
     );
@@ -743,12 +583,12 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                 child: SizedBox(
                   width: 350,
                   child: Card(
-                    color: Colors.white, // Background color
-                    elevation: 0,        // Shadow
+                    color: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: const BorderSide(
-                        color: royal,     // Border color
+                        color: royal,
                         width: 1,
                       ),
                     ),
@@ -764,22 +604,19 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                         availableGestures: AvailableGestures.all,
 
                         calendarStyle: CalendarStyle(
-                          // ALL DAYS
                           defaultTextStyle: const TextStyle(color: royal),
                           weekendTextStyle: const TextStyle(color: royal),
 
-                          // TODAY (rounded rectangle + royal text)
                           todayDecoration: BoxDecoration(
                             color: royal.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: royal, width: 2),
                           ),
                           todayTextStyle: const TextStyle(
-                            color: royal,   // << Today's text color
+                            color: royal,
                             fontWeight: FontWeight.bold,
                           ),
 
-                          // SELECTED DAY (rounded rectangle)
                           selectedDecoration: BoxDecoration(
                             color: royal,
                             borderRadius: BorderRadius.circular(8),
@@ -898,37 +735,67 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
               const CircularProgressIndicator(color: royal)
             else
               Column(
-                children: availableRooms.map((room) {
-                  return Card(
-                    color: Colors.white, // Background color
-                    elevation: 0,        // Shadow
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                        color: royal,     // Border color
-                        width: 1,
-                      ),
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        "${room['room_type']} - ${room['room_name']}",
-                        style: const TextStyle(
-                          color: royal,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "Available: ${room['available_rooms'].length} / ${room['total_rooms']}",
-                        style: TextStyle(color: royal),
-                      ),
-                      trailing:
-                      const Icon(Icons.arrow_forward_ios, color: royal),
-                      onTap: () => _selectRoomNumbers(room),
-                    ),
-                  );
-                }).toList(),
+                children: List.generate(availableRooms.length, (index) {
+                  return _buildRoomCard(index, availableRooms[index]);
+                }),
               ),
+            if (selectedRooms.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: royal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    final bookedRooms = availableRooms.map((room) {
+                      final key = "${room['room_type']}-${room['room_name']}";
+                      final numbers = selectedRooms[key]?.toList() ?? [];
+                      return [room['room_name'], room['room_type'], numbers];
+                    }).where((entry) => (entry[2] as List).isNotEmpty).toList();
+
+                    if (bookedRooms.isEmpty) {
+                      _showMessage("Please select at least one room.");
+                      return;
+                    }
+
+                    DateTime now = DateTime.now();
+
+                    bool isToday =
+                        checkIn!.year == now.year &&
+                            checkIn!.month == now.month &&
+                            checkIn!.day == now.day;
+
+                    bool isTimeCrossed = checkIn!.isBefore(now);
+
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) {
+                          if (isToday && isTimeCrossed) {
+                            return RoomBookingPage(
+                              bookedRooms: bookedRooms,
+                              checkIn: checkIn!,
+                              checkOut: checkOut!,
+                            );
+                          } else {
+                            return PreBookingPage(
+                              bookedRooms: bookedRooms,
+                              checkIn: checkIn!,
+                              checkOut: checkOut!,
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
+                  child: const Text("Proceed to Booking"),
+                ),
+              ),
+            const SizedBox(height: 70),
           ],
         ),
       ),

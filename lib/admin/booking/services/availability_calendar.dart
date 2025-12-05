@@ -77,7 +77,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -138,7 +138,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -179,14 +179,14 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
         return Theme(
           data: theme.copyWith(
             colorScheme: const ColorScheme.light(
-              primary: royal,        // header & selected date
+              primary: royal,
               onPrimary: Colors.white,
               onSurface: royal,
             ),
 
             inputDecorationTheme: InputDecorationTheme(
-              filled: false,                          // prevents royal fill
-              fillColor: Colors.transparent,          // must be transparent
+              filled: false,
+              fillColor: Colors.transparent,
 
               focusedBorder: OutlineInputBorder(
                 borderSide: const BorderSide(color: royal, width: 2),
@@ -353,7 +353,6 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ---- Check-In Label ----
                   const Text(
                     "Check-In",
                     style: TextStyle(
@@ -376,7 +375,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                       if (dt != null) update(() => tempIn = dt);
                     },
                     child: Text(
-                      formatDateTime12(tempIn!),   // only date-time
+                      formatDateTime12(tempIn!),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
@@ -405,7 +404,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                       if (dt != null) update(() => tempOut = dt);
                     },
                     child: Text(
-                      formatDateTime12(tempOut!),  // only date-time
+                      formatDateTime12(tempOut!),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
@@ -525,7 +524,7 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                                   : selected.add(n);
                             });
                           }
-                              : null, // disabled if not available
+                              : null,
                         );
                       }).toList(),
                     ),
@@ -593,12 +592,12 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                 child: SizedBox(
                   width: 350,
                   child: Card(
-                    color: Colors.white, // Background color
-                    elevation: 0,        // Shadow
+                    color: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: const BorderSide(
-                        color: royal,     // Border color
+                        color: royal,
                         width: 1,
                       ),
                     ),
@@ -614,22 +613,19 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
                         availableGestures: AvailableGestures.all,
 
                         calendarStyle: CalendarStyle(
-                          // ALL DAYS
                           defaultTextStyle: const TextStyle(color: royal),
                           weekendTextStyle: const TextStyle(color: royal),
 
-                          // TODAY (rounded rectangle + royal text)
                           todayDecoration: BoxDecoration(
                             color: royal.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: royal, width: 2),
                           ),
                           todayTextStyle: const TextStyle(
-                            color: royal,   // << Today's text color
+                            color: royal,
                             fontWeight: FontWeight.bold,
                           ),
 
-                          // SELECTED DAY (rounded rectangle)
                           selectedDecoration: BoxDecoration(
                             color: royal,
                             borderRadius: BorderRadius.circular(8),
@@ -750,12 +746,12 @@ class _AvailabilityCalendarPageState extends State<AvailabilityCalendarPage> {
               Column(
                 children: availableRooms.map((room) {
                   return Card(
-                    color: Colors.white, // Background color
-                    elevation: 0,        // Shadow
+                    color: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: const BorderSide(
-                        color: royal,     // Border color
+                        color: royal,
                         width: 1,
                       ),
                     ),

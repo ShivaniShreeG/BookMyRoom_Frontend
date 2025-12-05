@@ -78,27 +78,10 @@ class _OtherManagePageState extends State<OtherManagePage> {
       backgroundColor: royalLight.withValues(alpha: 0.2),
       body: SingleChildScrollView(
         child: Container(padding: const EdgeInsets.all(20),
-          // decoration: BoxDecoration(
-          //     gradient: LinearGradient(
-          //         begin: AlignmentGeometry.topCenter,
-          //         end: AlignmentGeometry.bottomCenter,
-          //         colors: [
-          //           Colors.teal.shade100.withValues(alpha: 0.1),
-          //           Colors.teal.shade200.withValues(alpha: 0.2),
-          //           Colors.teal.shade300.withValues(alpha: 0.3),
-          //           Colors.teal.shade400.withValues(alpha: 0.4),
-          //           Colors.teal.shade500.withValues(alpha: 0.5),
-          //           Colors.teal.shade600.withValues(alpha: 0.6),
-          //           Colors.teal.shade700.withValues(alpha: 0.7),
-          //           Colors.teal.shade800.withValues(alpha: 0.8),
-          //         ])
-          // ),
           child: Column(
             children: [
-              // 🔹 Hall Card
               if (lodgeName != null) _buildHallCard(),
               const SizedBox(height: 20),
-              // 🔹 Manage Card
               _buildManageCard(screenWidth),
               const SizedBox(height: 20),
               _buildExpenseCard(screenWidth),
@@ -115,16 +98,15 @@ class _OtherManagePageState extends State<OtherManagePage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(
-          color: royal, // ✅ Border color
-          width: 1.5,               // ✅ Border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       color: Colors.white,
-      // color: Colors.teal.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start, // ✅ Aligns avatar & text top-to-top
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
               radius: 40,
@@ -137,19 +119,18 @@ class _OtherManagePageState extends State<OtherManagePage> {
                   : null,
             ),
             const SizedBox(width: 16),
-            // ✅ Flexible layout like your scaled version
             Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    lodgeName ?? "Unknown Hall",
+                    lodgeName ?? "Unknown Lodge",
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: royal,
                     ),
-                    maxLines: 2, // ✅ Allow up to 2 lines (flexible title)
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     softWrap: true,
                   ),
@@ -160,7 +141,7 @@ class _OtherManagePageState extends State<OtherManagePage> {
                       fontSize: 14,
                       color: royal,
                     ),
-                    maxLines: 3, // ✅ Allow up to 3 lines
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     softWrap: true,
                   ),
@@ -174,14 +155,14 @@ class _OtherManagePageState extends State<OtherManagePage> {
   }
 
   Widget _buildExpenseCard(double screenWidth) {
-    final buttonSize = 70.0; // square buttons
+    final buttonSize = 70.0;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(
-          color: royal, // ✅ Border color
-          width: 1.5,                 // ✅ Border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       color: Colors.white,
@@ -190,7 +171,6 @@ class _OtherManagePageState extends State<OtherManagePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Centered title + dropdown
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -202,10 +182,8 @@ class _OtherManagePageState extends State<OtherManagePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                // const SizedBox(width:),
                 GestureDetector(
                   onTap: () {
-                    // Dropdown action
                   },
                   child: const Icon(
                     Icons.arrow_drop_down,
@@ -216,7 +194,6 @@ class _OtherManagePageState extends State<OtherManagePage> {
               ],
             ),
             const SizedBox(height: 16),
-            // Buttons
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 16,
@@ -253,15 +230,15 @@ class _OtherManagePageState extends State<OtherManagePage> {
   }
 
   Widget _buildManageCard(double screenWidth) {
-    final buttonSize = 70.0; // square buttons
+    final buttonSize = 70.0;
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(
-          color: royal, // ✅ Border color
-          width: 1.5,                 // ✅ Border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       color: Colors.white,
@@ -283,7 +260,6 @@ class _OtherManagePageState extends State<OtherManagePage> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Dropdown action
                   },
                   child: const Icon(
                     Icons.arrow_drop_down,
@@ -294,7 +270,6 @@ class _OtherManagePageState extends State<OtherManagePage> {
               ],
             ),
             const SizedBox(height: 16),
-            // Buttons
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 16,
@@ -379,9 +354,12 @@ class _OtherManagePageState extends State<OtherManagePage> {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              // color: const Color(0xFF5B6547),
               color: royalLight.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: royal,
+                width: 1.5 ,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: royal.withValues(alpha:0.3),

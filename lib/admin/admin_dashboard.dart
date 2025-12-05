@@ -8,6 +8,7 @@ import 'booking/services/check_in/checkin.dart';
 import 'booking/services/upcoming/upcoming_bookings.dart';
 import 'booking/services/history/booking_history.dart';
 import 'booking/services/charges_for_booking.dart';
+import 'booking/services/date_changing/booking_list.dart';
 import 'booking/services/cancel/cancel.dart';
 import 'booking/services/billing/billing.dart';
 import 'booking/services/availability_calendar.dart';
@@ -97,7 +98,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // 📱 MediaQuery scaling factors
     final size = MediaQuery.of(context).size;
     final double screenWidth = size.width;
     final double screenHeight = size.height;
@@ -112,21 +112,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       )
           : SingleChildScrollView(
         child: Container(padding: const EdgeInsets.all(20),
-          // decoration: BoxDecoration(
-          //     gradient: LinearGradient(
-          //         begin: AlignmentGeometry.topCenter,
-          //         end: AlignmentGeometry.bottomCenter,
-          //         colors: [
-          //           Colors.teal.shade100.withValues(alpha: 0.1),
-          //           Colors.teal.shade200.withValues(alpha: 0.2),
-          //           Colors.teal.shade300.withValues(alpha: 0.3),
-          //           Colors.teal.shade400.withValues(alpha: 0.4),
-          //           Colors.teal.shade500.withValues(alpha: 0.5),
-          //           Colors.teal.shade600.withValues(alpha: 0.6),
-          //           Colors.teal.shade700.withValues(alpha: 0.7),
-          //           Colors.teal.shade800.withValues(alpha: 0.8),
-          //         ])
-          // ),
         child: Column(
           children: [
             if (selectedHall != null)
@@ -154,7 +139,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  /// 🔹 Hall Details Card
   Widget _buildHallCard(
       Map<String, dynamic> hall, double textScale, double boxScale) {
     return Card(
@@ -218,14 +202,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildExpenseCard(double screenWidth) {
-    final buttonSize = 70.0; // square buttons
+    final buttonSize = 70.0;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(
-          color: royal, // ✅ Border color
-          width: 1.5,                 // ✅ Border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       color: Colors.white,
@@ -234,7 +218,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Centered title + dropdown
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -246,11 +229,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                // const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: () {
-                    // Dropdown action
-                  },
+                  onTap: () {},
                   child: const Icon(
                     Icons.arrow_drop_down,
                     color: royal,
@@ -260,13 +240,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ],
             ),
             const SizedBox(height: 16),
-            // Buttons
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 16,
               runSpacing: 16,
               children: [
-
                 _buildManageButton(
                   icon: Icons.list_alt,
                   label: "Add Income",
@@ -348,6 +326,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             decoration: BoxDecoration(
               color: royalLight.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: royal,
+                width: 1.5 ,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: royal.withValues(alpha:0.3),
@@ -358,14 +340,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             child: Center(
               child: Icon(icon, size: 32, color:Colors.white),
-                // const Color(0xFFD8C9A9)
             ),
           ),
         ),
         const SizedBox(height: 6),
         SizedBox(
           width: size,
-          height: 36, // keeps consistent spacing for text lines
+          height: 36,
           child: Center(
             child: Text(
               label,
@@ -417,10 +398,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         "icon": Icons.change_circle_outlined,
         "label": "Date Changing",
         "onTap": () {
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => CancelHistoryPage()),
-          // );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => DateChangingPage()),
+          );
         }
       },
       {
@@ -469,16 +450,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           );
         }
       },
-      // {
-      //   "icon": Icons.event_note,
-      //   "label": "Upcoming Events",
-      //   "onTap": () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(builder: (context) => UpcomingEventsPage()),
-      //     );
-      //   }
-      // },
       {
         "icon": Icons.work_history_outlined,
         "label": "Upcoming Booking",
@@ -543,7 +514,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                // SizedBox(width: 10 * textScale),
                 GestureDetector(
                   onTap: () {},
                   child: Icon(Icons.arrow_drop_down,
@@ -590,7 +560,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             width: width,
             height: width,
             decoration: BoxDecoration(
-              // color: const Color(0xFF5B6547),
               color: royalLight.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(18 * boxScale),
               boxShadow: [
@@ -600,11 +569,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   offset: const Offset(0, 3),
                 ),
               ],
+              border: Border.all(
+                color: royal,
+                width: 1.5 * boxScale,
+              ),
             ),
             child: Center(
               child: Icon(icon,
                   size: 32 * textScale, color:Colors.white),
-                // const Color(0xFFD8C9A9)
             ),
           ),
         ),

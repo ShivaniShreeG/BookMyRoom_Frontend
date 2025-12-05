@@ -342,7 +342,7 @@ class _YearlyReportPageState extends State<YearlyReportPage> {
 
 // ✅ Opening balance carried forward from previous years
     final previousBalance = previousIncome + previousDrawingIn - previousExpense - previousDrawingOut;
-    final current_balance = previousBalance + balance;
+    final currentBalance = previousBalance + balance;
 
     // final formattedNow = DateFormat('yyyyMMddHHmm').format(now);
     Uint8List? hallLogo;
@@ -398,7 +398,7 @@ class _YearlyReportPageState extends State<YearlyReportPage> {
           if (_filteredData.isEmpty)
             pw.Center(child: pw.Text("No transactions for this year.", style: pw.TextStyle(font: tamilFont,fontSize: 9)))
           else
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: ["Month", "Income", "Expense", "Profit/Loss", "Drawing In", "Drawing Out"],
               headerStyle: pw.TextStyle(
                 font: tamilFontBold,
@@ -559,7 +559,7 @@ class _YearlyReportPageState extends State<YearlyReportPage> {
                   children: [
                     pw.Text("Current Balance:",
                         style: pw.TextStyle(font: tamilFontBold, fontSize: 9, color: royal)),
-                    pw.Text("₹${current_balance.toStringAsFixed(2)}",
+                    pw.Text("₹${currentBalance.toStringAsFixed(2)}",
                         style: pw.TextStyle(font: tamilFontBold, fontSize: 9, color: royal)),
                   ],
                 ),

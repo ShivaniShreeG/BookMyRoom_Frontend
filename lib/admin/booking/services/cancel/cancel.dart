@@ -69,8 +69,8 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
           _filteredBookings = _bookings;
         });
       }
-    } catch (e) {
-      debugPrint("❌ Error: $e");
+    } catch (e){
+    _showMessage("❌ Error: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -95,7 +95,7 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -174,7 +174,7 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -225,12 +225,12 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
                 /// PARTIAL CANCEL
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(context); // close dialog
+                    Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => PartialCancelPage(
-                          booking: b,   // ⬅ send same booking details
+                          booking: b,
                         ),
                       ),
                     );
@@ -244,12 +244,12 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
                 /// FULL CANCEL
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(context); // close dialog
+                    Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => CancelDetailsPage(
-                          booking: b,   // ⬅ you already have this page
+                          booking: b,
                         ),
                       ),
                     );
@@ -275,7 +275,6 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Booking ID + Status Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -327,29 +326,33 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
 
             const SizedBox(height: 6),
 
-            // Room Name + Type
-            Row(
-              children: [
-                Icon(Icons.meeting_room, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "${b["room_name"]} (${b["room_type"]})",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+            if (b["booked_room"] != null && (b["booked_room"] as List).isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: (b["booked_room"] as List<dynamic>).map<Widget>((room) {
+                  final roomName = room[0] ?? "-";
+                  final roomType = room[1] ?? "-";
+                  final roomNumbers = room[2] != null && (room[2] as List).isNotEmpty
+                      ? (room[2] as List).join(", ")
+                      : "-";
 
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.roofing_sharp, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "Room Number:${b["room_number"].join(", ")}",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.meeting_room, size: 18, color: royal),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "$roomName ($roomType) • Rooms: $roomNumbers",
+                            style: TextStyle(color: royal, fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -364,7 +367,6 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
 
             const SizedBox(height: 6),
 
-// Check-out
             Row(
               children: [
                 Icon(Icons.logout, size: 18, color: royal),
@@ -408,7 +410,6 @@ class _CancelBookedPageState extends State<CancelBookedPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search box
             hallDetails == null
                 ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
                 : _buildHallCard(hallDetails!),

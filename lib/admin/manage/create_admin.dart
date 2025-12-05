@@ -20,7 +20,6 @@ class CreateAdminPage extends StatefulWidget {
 class _CreateAdminPageState extends State<CreateAdminPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
   final _userIdController = TextEditingController();
   final _passwordController = TextEditingController();
   String _designation = "Manager";
@@ -69,8 +68,8 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
     if (lodgeId != null) {
-      await _fetchHallDetails(lodgeId); // fetch hall info
-      await _fetchAdmins();            // fetch admins
+      await _fetchHallDetails(lodgeId);
+      await _fetchAdmins();
     }
   }
 
@@ -90,7 +89,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching admins: $e");
+      _showMessage("Error fetching admins: $e");
     } finally {
       setState(() {
         _isLoadingAdmins = false;
@@ -141,14 +140,13 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
           _designation = "Manager";
           _showForm = false;
         });
-        await _fetchAdmins(); // 🔄 Refresh the admin list
+        await _fetchAdmins();
 
       } else {
         _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      _showMessage("❌ Error creating admin");
-      debugPrint("❌ Error creating admin: $e");
+      _showMessage("❌ Error creating admin: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -173,8 +171,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
         _showMessage("❌ Failed to delete admin: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting admin: $e");
-      _showMessage("❌ Error deleting admin");
+      _showMessage("❌ Error deleting admin: $e");
     }
   }
 
@@ -186,8 +183,8 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: royal, // your border color
-            width: 1.5,   // border thickness
+            color: royal,
+            width: 1.5,
           ),
         ),
         title: Text("Delete Admin", style: TextStyle(color: royal)),
@@ -218,8 +215,8 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: royal, // 🔹 Border color for the card
-            width: 1,                        // 🔹 Border width
+            color: royal,
+            width: 1,
           ),
         ),
       color: Colors.white,
@@ -235,10 +232,10 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
                 controller: _userIdController,
                 inputType: TextInputType.number,
                 hintText: "Enter User ID",
-                maxLength: 10, // ✅ limit typing to 10 digits
+                maxLength: 10,
                 inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly, // ✅ only digits allowed
-                  LengthLimitingTextInputFormatter(10),   // ✅ block after 10 digits
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
                 ],
                 validator: (v) {
                   if (v == null || v.isEmpty) return "Enter user ID";
@@ -361,7 +358,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -397,8 +394,8 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: royal, // your border color
-          width: 1.5,   // border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       child: Padding(
@@ -441,7 +438,6 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
               ),
             ),
             const SizedBox(width: 8),
-            // Keep the delete button fixed at the end
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -465,7 +461,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
         lodgeDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      // print("Error fetching hall details: $e");
+      _showMessage("Error fetching hall details: $e");
     } finally {
       setState(() {});
     }
@@ -494,7 +490,6 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Label
           Container(
             width: screenWidth * labelWidthFactor,
             alignment: Alignment.centerLeft,
@@ -504,8 +499,6 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
             ),
           ),
           const SizedBox(width: 10),
-
-          // Input or Dropdown
           Expanded(
             child: dropdownItems != null
                 ? DropdownButtonFormField<String>(
@@ -535,10 +528,10 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
               onChanged: onChanged,
               cursorColor: royal,
               style: TextStyle(color: royal),
-              maxLength: maxLength, // ✅ limit characters
-              inputFormatters: inputFormatters, // ✅ enforce filtering
+              maxLength: maxLength,
+              inputFormatters: inputFormatters,
               decoration: InputDecoration(
-                counterText: "", // hides the length counter
+                counterText: "",
                 hintText: hintText,
                 hintStyle: TextStyle(color: royalLight),
                 enabledBorder: OutlineInputBorder(

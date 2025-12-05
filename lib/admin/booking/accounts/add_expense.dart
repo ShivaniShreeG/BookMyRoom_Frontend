@@ -39,8 +39,8 @@ class _AddExpensePageState extends State<AddExpensePage> {
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
     if (lodgeId != null) {
-      await _fetchHallDetails(); // fetch hall info
-      await _fetchExpenses();// fetch admins
+      await _fetchHallDetails();
+      await _fetchExpenses();
     }
   }
   void _showMessage(String message) {
@@ -87,11 +87,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
-    final userId = prefs.getString("userId"); // ✅ get user_id
+    final userId = prefs.getString("userId");
     if (lodgeId == null||userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ Lodge ID or User ID not found")),
-      );
+      _showMessage("❌ Lodge ID or User ID not found");
       setState(() => _isLoading = false);
       return;
     }
@@ -120,13 +118,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_editingExpenseId == null
-                ? "✅ Expense added successfully"
-                : "✅ Expense updated successfully"),
-          ),
-        );
+        _showMessage(_editingExpenseId == null
+            ? "✅ Expense added successfully"
+            : "✅ Expense updated successfully");
         _fetchExpenses();
 
         _formKey.currentState!.reset();
@@ -139,12 +133,10 @@ class _AddExpensePageState extends State<AddExpensePage> {
         });
 
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed: ${response.body}")),
-        );
+        _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error submitting expense: $e");
+      _showMessage("❌ Error submitting expense: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -157,16 +149,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
       if (response.statusCode == 200) {
         setState(() => _expenses.removeWhere((e) => e["id"] == expenseId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Expense deleted successfully")),
-        );
+        _showMessage("✅ Expense deleted successfully");
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to delete: ${response.body}")),
-        );
+        _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting expense: $e");
+      _showMessage("❌ Error deleting expense: $e");
     }
   }
 
@@ -205,15 +193,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
     });
   }
 
-  // InputDecoration _buildInputDecoration(String label) {
-  //   return InputDecoration(
-  //     labelText: label,
-  //     labelStyle: TextStyle(color: royal),
-  //     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: royal)),
-  //     focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: royal)),
-  //   );
-  // }
-
   Widget _buildExpenseForm() {
     return Card(
       elevation: 8,
@@ -229,7 +208,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
           key: _formKey,
           child: Column(
             children: [
-              // Reason Field
               labeledTanRow(
                 label: "Reason",
                 controller: _reasonController,
@@ -239,7 +217,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 inputType: TextInputType.text,
               ),
               const SizedBox(height: 16),
-              // Amount Field
               labeledTanRow(
                 label: "Amount",
                 controller: _amountController,
@@ -307,18 +284,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            // Leading icon with background circle
-            // Container(
-            //   padding: const EdgeInsets.all(12),
-            //   decoration: BoxDecoration(
-            //     color: royal.withValues(alpha0.2),
-            //     shape: BoxShape.circle,
-            //   ),
-            //   child: Icon(Icons.attach_money, color: royal, size: 28),
-            // ),
-            // const SizedBox(width: 16),
-
-            // Reason and amount
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,8 +308,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 ],
               ),
             ),
-
-            // Edit & Delete buttons
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -364,33 +327,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
       ),
     );
   }
-
-  // Widget _buildExpenseCard(Map<String, dynamic> expense) {
-  //   return Card(
-  //     color: backgroundColor,
-  //     elevation: 3,
-  //     margin: const EdgeInsets.symmetric(vertical: 8),
-  //     child: ListTile(
-  //       leading: Icon(Icons.attach_money, color: royal),
-  //       title: Text(expense["reason"] ?? "-", style: TextStyle(color: royal)),
-  //       subtitle: Text("Amount: ₹${expense["amount"] ?? "-"}",
-  //           style: TextStyle(color: royal)),
-  //       trailing: Row(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           IconButton(
-  //             icon: Icon(Icons.edit, color: royal),
-  //             onPressed: () => _editExpense(expense),
-  //           ),
-  //           IconButton(
-  //             icon: Icon(Icons.delete, color: royal),
-  //             onPressed: () => _showDeleteDialog(expense["id"], expense["reason"] ?? "-"),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget labeledTanRow({
     required String label,
@@ -434,14 +370,14 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   cursorColor: royal,
                   decoration: InputDecoration(
                     hintText: hintText,
-                    hintStyle: TextStyle(color: royal.withOpacity(0.6)),
+                    hintStyle: TextStyle(color: royal.withValues(alpha: 0.6)),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 12,
                     ),
                     filled: true,
-                    fillColor: royalLight.withOpacity(0.05),
+                    fillColor: royalLight.withValues(alpha: 0.05),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: royal, width: 1),
                       borderRadius: BorderRadius.circular(12),
@@ -498,7 +434,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -538,7 +474,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -584,7 +520,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
               ),
             if (_showForm) _buildExpenseForm(),
             const SizedBox(height: 16),
-            ..._expenses.map(_buildExpenseCard).toList(),
+            ..._expenses.map(_buildExpenseCard)
           ],
         ),
       ),

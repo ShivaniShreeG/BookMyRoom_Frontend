@@ -5,6 +5,10 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../public/config.dart';
 import 'package:intl/intl.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class DashboardPage extends StatefulWidget {
   final dynamic selectedHall;
 
@@ -25,12 +29,36 @@ class _DashboardPageState extends State<DashboardPage> {
     _fetchHallStats();
   }
 
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _fetchHallStats() async {
     try {
-      final hallId =
-          widget.selectedHall['hallId'] ?? widget.selectedHall['hall_id'];
+      final lodgeId =
+          widget.selectedHall['lodgeId'] ?? widget.selectedHall['lodge_id'];
       final response =
-      await http.get(Uri.parse("$baseUrl/dashboard/$hallId/stats"));
+      await http.get(Uri.parse("$baseUrl/dashboard/$lodgeId/stats"));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -39,13 +67,13 @@ class _DashboardPageState extends State<DashboardPage> {
         });
       } else {
         setState(() {
-          error = "Failed to fetch stats: ${response.statusCode}";
+          _showMessage("Failed to fetch stats: ${response.statusCode}");
           loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        error = "Error: $e";
+        _showMessage("Error: $e");
         loading = false;
       });
     }
@@ -55,61 +83,57 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final hall = widget.selectedHall;
     final screenWidth = MediaQuery.of(context).size.width;
-// Format the due date properly before displaying
     String formattedDueDate = "No Due Date";
-    if (hall['dueDate'] != null && hall['dueDate'].toString().isNotEmpty) {
+    if (hall['duedate'] != null && hall['duedate'].toString().isNotEmpty) {
       try {
-        DateTime parsedDate = DateTime.parse(hall['dueDate']);
-        formattedDueDate = DateFormat('dd MMM yyyy').format(parsedDate); // Example: 27 Oct 2025
+        DateTime parsedDate = DateTime.parse(hall['duedate']);
+        formattedDueDate = DateFormat('dd MMM yyyy').format(parsedDate);
       } catch (e) {
-        formattedDueDate = hall['dueDate'].toString(); // fallback
+        formattedDueDate = hall['duedate'].toString();
       }
     }
 
-
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF3EAD6),
+      backgroundColor: royalLight.withValues(alpha: 0.3),
       appBar: AppBar(
         title: const Text(
           "Dashboard",
           style: TextStyle(
-            color: Color(0xFFD8C9A9),
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF5B6547),
-        iconTheme: const IconThemeData(color: Color(0xFFD8C9A9)),
+        backgroundColor: royal,
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 4,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20), // Rounded bottom corners
+            bottom: Radius.circular(20),
           ),
         ),
       ),
       body: hall == null
           ? const Center(
         child: Text(
-          "No hall selected",
-          style: TextStyle(fontSize: 16, color: Color(0xFF5B6547)),
+          "No lodge selected",
+          style: TextStyle(fontSize: 16, color: royal),
         ),
       )
           : loading
           ? const Center(
-        child: CircularProgressIndicator(color: Color(0xFF5B6547)),
+        child: CircularProgressIndicator(color: royal),
       )
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ✅ Revenue vs Expenses Section (No Card)
             const Text(
               "Revenue vs Expenses",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF5B6547),
+                color: royal,
               ),
               textAlign: TextAlign.center,
             ),
@@ -125,19 +149,18 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             const SizedBox(height: 16),
-            // Legend
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildLegend(
                     Colors.green,
-                    "Revenue ₹${(stats?['totalRevenue'] ?? 0).toStringAsFixed(2)}",
+                    "Revenue ₹${(stats?['totalIncome'] ?? 0).toStringAsFixed(2)}",
                   ),
                   const SizedBox(height: 8),
                   _buildLegend(
                     Colors.red,
-                    "Expenses ₹${(stats?['totalExpenses'] ?? 0).toStringAsFixed(2)}",
+                    "Expenses ₹${(stats?['totalExpense'] ?? 0).toStringAsFixed(2)}",
                   ),
                 ],
               ),
@@ -145,7 +168,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 24),
 
-            // ✅ 3 Stat Cards
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -171,11 +193,8 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
 
             const SizedBox(height: 24),
-
-            // ✅ Hall Details Card
-            // Inside the Hall Details Card (replace the relevant part)
             Card(
-              color: const Color(0xFFD8C9A9),
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -189,7 +208,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       CircleAvatar(
                         radius: 50,
                         backgroundImage: MemoryImage(base64Decode(hall['logo'])),
-                        backgroundColor: const Color(0xFF5B6547),
+                        backgroundColor: royal,
                       ),
                     const SizedBox(height: 16),
                     Text(
@@ -197,14 +216,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5B6547),
+                        color: royal,
                       ),
                     ),
                     const SizedBox(height: 12),
                     // Hall ID row added here
                     _buildDetailRow(
                         icon: Icons.perm_identity,
-                        text: "Hall ID: ${hall['hallId'] ?? hall['hall_id'] ?? 'N/A'}"),
+                        text: "Lodge ID: ${hall['lodgeId'] ?? hall['lodge_id'] ?? 'N/A'}"),
                     const SizedBox(height: 8),
                     _buildDetailRow(
                         icon: Icons.location_on,
@@ -235,11 +254,11 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildDetailRow({required IconData icon, required String text}) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF5B6547)),
+        Icon(icon, color: royal),
         const SizedBox(width: 10),
         Expanded(
           child: Text(text,
-              style: const TextStyle(fontSize: 16, color: Color(0xFF5B6547))),
+              style: const TextStyle(fontSize: 16, color: royal)),
         ),
       ],
     );
@@ -247,7 +266,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildStatCard({required String label, required String value}) {
     return Card(
-      color: const Color(0xFFD8C9A9),
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       child: Padding(
@@ -258,7 +277,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Text(
               value,
               style: const TextStyle(
-                  color: Color(0xFF5B6547),
+                  color: royal,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
@@ -267,7 +286,7 @@ class _DashboardPageState extends State<DashboardPage> {
             Text(
               label,
               style: const TextStyle(
-                  color: Color(0xFF5B6547),
+                  color: royal,
                   fontSize: 14,
                   fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
@@ -294,26 +313,26 @@ class _DashboardPageState extends State<DashboardPage> {
         Text(
           text,
           style: const TextStyle(
-              color: Color(0xFF5B6547), fontWeight: FontWeight.bold),
+              color: royal, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
   List<PieChartSectionData> _getPieSections() {
-    final revenue = (stats?['totalRevenue'] ?? 0).toDouble();
-    final expenses = (stats?['totalExpenses'] ?? 0).toDouble();
+    final revenue = (stats?['totalIncome'] ?? 0).toDouble();
+    final expenses = (stats?['totalExpense'] ?? 0).toDouble();
     final total = revenue + expenses;
 
     if (total == 0) {
       return [
         PieChartSectionData(
-          color: Color(0xFFD8C9A9),
+          color: Colors.white,
           value: 1,
           title: "No Data",
           radius: 100,
           titleStyle: const TextStyle(
-              color: Color(0xFF5B6547), fontWeight: FontWeight.bold, fontSize: 14),
+              color: royal, fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ];
     }
@@ -341,3 +360,4 @@ class _DashboardPageState extends State<DashboardPage> {
     ];
   }
 }
+

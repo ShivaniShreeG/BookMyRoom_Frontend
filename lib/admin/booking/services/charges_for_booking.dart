@@ -23,6 +23,9 @@ class _AddChargesPageState extends State<AddChargesPage> {
   final _bookingIdController = TextEditingController();
   final _searchController = TextEditingController();
   String? _searchBookingId;
+  bool _bookingExists = false;
+  String _bookingCheckMessage = "";
+
 
   bool _isLoading = false;
   bool _isFetching = true;
@@ -44,6 +47,47 @@ class _AddChargesPageState extends State<AddChargesPage> {
     if (lodgeId != null) {
       await _fetchHallDetails();
       await _fetchCharges();
+    }
+  }
+
+  Future<void> _checkBookingStatus(String bookingId) async {
+    if (bookingId.isEmpty) {
+      setState(() {
+        _bookingExists = false;
+        _bookingCheckMessage = "";
+      });
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lodgeId = prefs.getInt("lodgeId"); // Lodges are required in backend
+      if (lodgeId == null) return;
+
+      final res = await http.get(Uri.parse(
+          '$baseUrl/charges/check?booking_id=$bookingId&lodge_id=$lodgeId'));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+
+        final exists = data['exists'] ?? false;
+        final isBooked = data['isBooked'] ?? false;
+
+        setState(() {
+          _bookingExists = exists && isBooked;
+
+          _bookingCheckMessage = !exists
+              ? "❌ Booking ID not found"
+              : !isBooked
+              ? "⚠️ Booking is invalid"
+              : "✅ Booking is valid";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _bookingExists = false;
+        _bookingCheckMessage = "❌ Network error while checking Booking ID";
+      });
     }
   }
 
@@ -77,7 +121,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching charges: $e");
+      _showMessage("❌ Error fetching charges: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -92,7 +136,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
     final lodgeId = prefs.getInt("lodgeId");
     final userId = prefs.getString("userId");
     if (lodgeId == null || userId == null) {
-      _showMessage("❌ Hall ID or User ID not found");
+      _showMessage("❌ Lodge ID or User ID not found");
       setState(() => _isLoading = false);
       return;
     }
@@ -247,11 +291,19 @@ class _AddChargesPageState extends State<AddChargesPage> {
                       borderSide: BorderSide(color: Colors.redAccent, width: 2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    fillColor: royalLight.withOpacity(0.05),
+                    fillColor: royalLight.withValues(alpha: 0.05),
                     filled: true,
+                    helperText: _bookingCheckMessage,
+                    helperStyle: TextStyle(
+                      color: _bookingExists ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   validator: (value) =>
                   value == null || value.isEmpty ? "Enter booking ID" : null,
+                  onChanged: (value) {
+                    _checkBookingStatus(value.trim());
+                  },
                 ),
               ),
               const SizedBox(height: 16),
@@ -329,7 +381,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
                         backgroundColor: royal,
                         foregroundColor: Colors.white,
                       ),
-                      onPressed: _isLoading ? null : _submitCharge,
+                      onPressed: !_bookingExists ? null : _submitCharge,
                       child: _isLoading
                           ? CircularProgressIndicator(color: Colors.white)
                           : Text(isEditing ? "Update Charge" : "Add Charge"),
@@ -381,7 +433,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
           children: [
             // The main card
             Card(
-              elevation: 4,
+              elevation: 0,
               color: Colors.white,
               margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
               shape: RoundedRectangleBorder(
@@ -431,13 +483,6 @@ class _AddChargesPageState extends State<AddChargesPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: royal, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: royal.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -528,7 +573,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
         border: Border.all(color: royal, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: royal.withOpacity(0.15),
+            color: royal.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -632,6 +677,7 @@ class _AddChargesPageState extends State<AddChargesPage> {
                 style: TextStyle(color: royal),
                 decoration: InputDecoration(
                   hintText: "Search by Booking ID",
+                  hintStyle: TextStyle(color: royal),
                   prefixIcon: Icon(Icons.search, color: royal),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),

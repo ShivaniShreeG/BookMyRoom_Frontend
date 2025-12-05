@@ -5,6 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../../public/config.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class EditHallPage extends StatefulWidget {
   final dynamic hall;
 
@@ -37,19 +41,44 @@ class _EditHallPageState extends State<EditHallPage> {
     _addressController = TextEditingController(text: widget.hall['address']);
     _base64Logo = widget.hall['logo'];
     _dueDateController = TextEditingController(
-      text: widget.hall['dueDate'] != null
-          ? widget.hall['dueDate'].toString().split('T').first
+      text: widget.hall['duedate'] != null
+          ? widget.hall['duedate'].toString().split('T').first
           : '',
     );
 
   }
+
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
-    _dueDateController.dispose(); // 🆕 added line
+    _dueDateController.dispose();
     super.dispose();
   }
 
@@ -72,7 +101,6 @@ class _EditHallPageState extends State<EditHallPage> {
     } catch (_) {
       initialDate = DateTime.now();
     }
-    print("📅 Due date received from backend: ${widget.hall['dueDate']}");
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -80,14 +108,52 @@ class _EditHallPageState extends State<EditHallPage> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
       builder: (BuildContext context, Widget? child) {
+        final theme = Theme.of(context);
+
         return Theme(
-          data: ThemeData(
+          data: theme.copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5B6547), // header & buttons
-              onPrimary: Color(0xFFD8C9A9), // text on buttons
-              onSurface: Color(0xFF5B6547), // body text
+              primary: royal,
+              onPrimary: Colors.white,
+              onSurface: royal,
             ),
-            dialogBackgroundColor: Color(0xFFECE5D8),
+
+            inputDecorationTheme: InputDecorationTheme(
+              filled: false,
+              fillColor: Colors.transparent,
+
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 1.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+
+              labelStyle: const TextStyle(color: royal),
+              hintStyle: const TextStyle(color: royal),
+              suffixIconColor: royal,
+            ),
+
+            textTheme: theme.textTheme.copyWith(
+              bodySmall:const TextStyle(color: royal) ,
+              bodyMedium: const TextStyle(color: royal),
+              bodyLarge: const TextStyle(color: royal),
+              titleMedium: const TextStyle(color: royal),
+            ),
+
+            textSelectionTheme: const TextSelectionThemeData(
+              cursorColor: royal,
+              selectionColor: Colors.white,
+              selectionHandleColor: royal,
+            ),
+
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: royal,
+              ),
+            ),
           ),
           child: child!,
         );
@@ -112,13 +178,13 @@ class _EditHallPageState extends State<EditHallPage> {
       "email": _emailController.text.trim(),
       "address": _addressController.text.trim(),
       if (_base64Logo != null) "logo": _base64Logo,
-      "dueDate": _dueDateController.text.trim(),
+      "duedate": _dueDateController.text.trim(),
 
     };
 
     try {
       final response = await http.patch(
-        Uri.parse('$baseUrl/halls/${widget.hall['hall_id']}'),
+        Uri.parse('$baseUrl/lodges/${widget.hall['lodge_id']}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(hallData),
       );
@@ -126,30 +192,13 @@ class _EditHallPageState extends State<EditHallPage> {
       setState(() => _isLoading = false);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Hall updated successfully!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, data); // Return updated data
+        _showMessage("Lodge updated successfully!");
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to update hall: ${response.statusCode}"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showMessage("Failed to update lodge: ${response.statusCode}");
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error updating hall: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showMessage("Error updating lodge: $e");
     }
   }
 
@@ -166,11 +215,22 @@ class _EditHallPageState extends State<EditHallPage> {
         maxLines: maxLines,
         validator: (value) =>
         value == null || value.isEmpty ? 'Please enter $label' : null,
+        cursorColor: royal,
+        style: TextStyle(color: royal),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: TextStyle(color: royal),
           filled: true,
-          fillColor: Color(0xFFD8C9A9),
+          fillColor: Colors.white,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: royal, width: 2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: royal, width: 1),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );
@@ -179,14 +239,14 @@ class _EditHallPageState extends State<EditHallPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFECE5D8),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF5B6547),
-        iconTheme: const IconThemeData(color: Color(0xFFD8C9A9)),
+        backgroundColor: royal,
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          "Edit Hall",
+          "Edit Lodge",
           style: TextStyle(
-            color: Color(0xFFD8C9A9),
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -197,13 +257,13 @@ class _EditHallPageState extends State<EditHallPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Card(
-          color: const Color(0xFFECE5D8),
+          color: Colors.white,
           elevation: 8,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: const BorderSide(
-              color: Color(0xFF5B6547), // border color
-              width: 1, // border thickness
+              color: royal,
+              width: 1,
             ),
           ),
           child: Padding(
@@ -212,12 +272,11 @@ class _EditHallPageState extends State<EditHallPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Logo preview
                   GestureDetector(
                     onTap: _pickImage,
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundColor: const Color(0xFF5B6547),
+                      backgroundColor: royal,
                       backgroundImage: _selectedImage != null
                           ? FileImage(_selectedImage!)
                           : (_base64Logo != null
@@ -233,7 +292,7 @@ class _EditHallPageState extends State<EditHallPage> {
                   const Text(
                     "Tap to change logo",
                     style: TextStyle(
-                      color: Color(0xFF5B6547),
+                      color: royal,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -271,8 +330,8 @@ class _EditHallPageState extends State<EditHallPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5B6547),
-                        foregroundColor: const Color(0xFFD8C9A9),
+                        backgroundColor: royal,
+                        foregroundColor: Colors.white,
                         padding:
                         const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(

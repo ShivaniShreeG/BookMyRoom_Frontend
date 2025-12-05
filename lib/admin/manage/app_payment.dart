@@ -78,7 +78,7 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
           ? json.decode(historyRes.body)
           : [];
     } catch (e) {
-      debugPrint("Error fetching payment data: $e");
+      _showMessage("Error fetching payment data: $e");
     }
     setState(() => isLoading = false);
   }
@@ -114,7 +114,7 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
     if (status == 'PENDING' || status == 'FAILED') {
       _startRazorpay(currentPayment!);
     } else if (canRenew) {
-      _createPayment(); // ✅ Allow paying for next year
+      _createPayment();
     } else {
       _showMessage("Payment already completed and next year not yet available.");
     }
@@ -130,7 +130,7 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       'description': '',
       'prefill': {'contact': '', 'email': ''},
       'external': {'wallets': ['paytm']},
-      'theme.color': '#19527A', // ✅ Olive theme
+      'theme.color': '#19527A',
       'notes': {'lodge_id': lodgeId.toString()},
     };
 
@@ -307,7 +307,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
     final total = p['totalAmount'] ?? p['amount'] ?? 0;
     final duedate = p['duedate'] ?? p['periodStart'];
     final status = p['status'];
-    // final canRenew = p['canRenew'] == true;
 
     String title;
     if (status == 'COMPLETED') {
@@ -319,7 +318,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
     } else {
       title = "Payment Plan";
     }
-    // final canPay = (status == 'PENDING' || status == 'FAILED' || canRenew);
 
     return Card(
       elevation: 6,
@@ -357,53 +355,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       ),
     );
   }
-
-  // Widget _buildCurrentPaymentCard() {
-  //   final p = currentPayment!;
-  //   final base = p['BaseAmount'] ?? 0;
-  //   final gst = p['gstAmount'] ?? 0;
-  //   final total = p['totalAmount'] ?? p['amount'] ?? 0;
-  //   final duedate = p['duedate'] ?? p['periodStart'];
-  //   final isCompleted = p['status'] == 'COMPLETED';
-  //   final title = isCompleted ? "Next Payment" : "Current Payment";
-  //
-  //   return Card(
-  //     elevation: 6,
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.circular(16),
-  //       side: BorderSide(color: royal, width: 1),
-  //     ),
-  //     color: backgroundColor,
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(16),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text(
-  //             title,
-  //             style: TextStyle(
-  //               fontSize: 18,
-  //               fontWeight: FontWeight.bold,
-  //               color: royal,
-  //             ),
-  //           ),
-  //           const SizedBox(height: 8),
-  //           _infoRow("Due Date", formatDate(duedate)),
-  //           _infoRow("Status", p['status']),
-  //           _infoRow("Base Amount", "₹$base"),
-  //           _infoRow("GST", "₹$gst"),
-  //           _infoRow("Total Payable", "₹$total"),
-  //           _infoRow(
-  //             "Period",
-  //             "${formatDate(p['periodStart'])} → ${formatDate(p['periodEnd'])}",
-  //           ),
-  //           if (p['transactionId'] != null)
-  //             _infoRow("Txn ID", p['transactionId']),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _infoRow(String label, String value) {
     return Padding(
@@ -461,8 +412,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
           _infoRow("Status", p['status']),
           _infoRow("Period Start", formatDate(p['periodStart'])),
           _infoRow("Period End", formatDate(p['periodEnd'])),
-          // if (p['transactionId'] != null)
-          //   _infoRow("Txn ID", p['transactionId']),
           if (p['createdAt'] != null)
             _infoRow("Paid On", formatDate(p['createdAt'])),
         ],
@@ -479,7 +428,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
     final createdAt = lodgeData?['created_at'];
     final created = formatDate(createdAt ?? '');
 
-    // 🟢 1️⃣ If no payment history → trial logic
     if (paymentHistory.isEmpty) {
       if (hallDueDate != null && now.isBefore(hallDueDate)) {
         return _statusCard(
@@ -503,7 +451,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       }
     }
 
-    // 🟡 2️⃣ Sort by start date (latest first)
     paymentHistory.sort((a, b) {
       final aStart = DateTime.tryParse(a['periodStart'] ?? '') ?? DateTime(2000);
       final bStart = DateTime.tryParse(b['periodStart'] ?? '') ?? DateTime(2000);
@@ -535,7 +482,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       orElse: () => {},
     );
 
-    // 🟢 3️⃣ Find upcoming (next year’s) plan if already paid
     final nextPlan = paymentHistory.firstWhere(
           (p) {
         final s = DateTime.tryParse(p['periodStart'] ?? '');
@@ -544,17 +490,12 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       orElse: () => {},
     );
 
-    // 🟢 4️⃣ Determine what to show inside the Current Plan card
     if (activePlan.isNotEmpty) {
       final current = activePlan;
-      // final start = DateTime.tryParse(current['periodStart']);
-      // final end = DateTime.tryParse(current['periodEnd']);
-      // final total = current['totalAmount'] ?? current['amount'] ?? 0;
 
       String label = "Next Due Date";
       String value = formatDate(current['periodEnd']);
 
-      // 🔸 If next plan already paid, replace due date with next plan start date
       if (nextPlan.isNotEmpty) {
         label = "Next Plan Starts On";
         value = formatDate(nextPlan['periodStart']);
@@ -568,19 +509,15 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
             "${formatDate(current['periodStart'])} → ${formatDate(current['periodEnd'])}",
           ),
           _infoRow(label, value),
-          // _infoRow("Total Paid", "₹$total"),
         ],
         statusText: "ACTIVE",
         statusColor: Colors.green[800],
       );
     }
 
-    // 🔴 5️⃣ If no current plan (all expired)
     final last = paymentHistory.first;
-    // final end = DateTime.tryParse(last['periodEnd'] ?? '');
     if (hallDueDate != null && now.isBefore(hallDueDate)) {
       if (nextPlan.isNotEmpty) {
-        // 🔹 Has an upcoming paid plan
         return _statusCard(
           title: "Trial Period (Before Next Plan)",
           rows: [
@@ -591,7 +528,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
           statusColor: royal,
         );
       } else {
-        // 🔹 No next plan yet → normal trial logic
         return _statusCard(
           title: "Trial Period (Post Plan)",
           rows: [
@@ -604,7 +540,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
       }
     }
     else if (nextPlan.isNotEmpty) {
-      // No active plan, but next plan is upcoming (before current period starts)
       final n = nextPlan;
       return _statusCard(
         title: "Next Plan (Paid)",
@@ -616,7 +551,6 @@ class _AppPaymentPageState extends State<AppPaymentPage> {
         statusColor: Colors.orange[800],
       );
     } else {
-      // expired and no next
       return _statusCard(
         title: "Plan Expired",
         rows: [

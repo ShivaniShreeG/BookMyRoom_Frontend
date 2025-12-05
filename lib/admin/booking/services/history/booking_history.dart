@@ -45,20 +45,16 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print(data);
         List bookings = [];
 
-        /// CASE 1 → Backend returns a LIST directly
         if (data is List) {
           bookings = data;
         }
 
-        /// CASE 2 → Backend returns { success: true, data: [] }
         else if (data is Map && data["data"] is List) {
           bookings = data["data"];
         }
 
-        /// CASE 3 → Backend uses another key (example: "details")
         else if (data is Map && data["details"] is List) {
           bookings = data["details"];
         }
@@ -69,7 +65,7 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error: $e");
+      _showMessage("❌ Error: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -94,7 +90,7 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -173,7 +169,7 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -222,7 +218,6 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Booking ID + Status Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -274,29 +269,34 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
 
             const SizedBox(height: 6),
 
-            // Room Name + Type
-            Row(
-              children: [
-                Icon(Icons.meeting_room, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "${b["room_name"]} (${b["room_type"]})",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+            if (b["booked_room"] != null && (b["booked_room"] as List).isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: (b["booked_room"] as List<dynamic>).map<Widget>((room) {
+                  final roomName = room[0] ?? "-";
+                  final roomType = room[1] ?? "-";
+                  final roomNumbers = room[2] != null && (room[2] as List).isNotEmpty
+                      ? (room[2] as List).join(", ")
+                      : "-";
 
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.roofing_sharp, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "Room Number:${b["room_number"].join(", ")}",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.meeting_room, size: 18, color: royal),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "$roomName ($roomType) • Rooms: $roomNumbers",
+                            style: TextStyle(color: royal, fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+
             const SizedBox(height: 8),
             Row(
               children: [
@@ -311,7 +311,6 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
 
             const SizedBox(height: 6),
 
-// Check-out
             Row(
               children: [
                 Icon(Icons.logout, size: 18, color: royal),
@@ -327,8 +326,6 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -356,20 +353,30 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search box
             hallDetails == null
                 ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
                 : _buildHallCard(hallDetails!),
 
             const SizedBox(height: 16),
             TextField(
+              cursorColor: royal,
+              style: TextStyle(color: royal),
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: "Search by name, phone, room, booking id...",
+                hintStyle: TextStyle(color: royal),
                 prefixIcon: Icon(Icons.search, color: royal),
                 filled: true,
                 fillColor: royalLight.withAlpha(20),
                 border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: royal, width: 1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: royal, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -380,7 +387,7 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
               child: _filteredBookings.isEmpty
                   ? Center(
                 child: Text(
-                  "No pre-bookings found",
+                  "No bookings found",
                   style: TextStyle(color: royal, fontSize: 16),
                 ),
               )

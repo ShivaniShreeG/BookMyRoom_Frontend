@@ -5,7 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import '../public/config.dart';
 import 'home.dart';
 
-
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
@@ -55,14 +57,37 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
 
   @override
   void didPopNext() {
-    // Refresh when returning from another page
     fetchHalls();
     fetchCounts();
   }
 
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> fetchHalls() async {
     try {
-      final url = Uri.parse('$baseUrl/halls');
+      final url = Uri.parse('$baseUrl/lodges');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -70,14 +95,10 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
           _halls = jsonDecode(response.body);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Failed to fetch halls: ${response.body}')),
-        );
+        _showMessage('❌ Failed to fetch lodges: ${response.body}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e')),
-      );
+      _showMessage('❌ Error: $e');
     }
   }
 
@@ -88,32 +109,30 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          totalUsers = data['totalUsers'] ?? 0;
-          totalBookings = data['totalBookings'] ?? 0;
+          totalUsers = data['activeUsersCount'] ?? 0;
+          totalBookings = data['totalBookingsCount'] ?? 0;
         });
       }
     } catch (e) {
-      // silently fail
+      _showMessage('❌ Error: $e');
     }
   }
 
   Future<void> addHall() async {
     setState(() => _isLoading = true);
 
-    int? hallId;
+    int? lodgeId;
     if (_hallIdController.text.isNotEmpty) {
-      hallId = int.tryParse(_hallIdController.text);
-      if (hallId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Hall ID must be a number')),
-        );
+      lodgeId = int.tryParse(_hallIdController.text);
+      if (lodgeId == null) {
+        _showMessage('❌ Lodge ID must be a number');
         setState(() => _isLoading = false);
         return;
       }
     }
 
     final hall = {
-      if (hallId != null) 'hall_id': hallId,
+      if (lodgeId != null)'lodge_id': lodgeId,
       'name': _nameController.text,
       'phone': _phoneController.text,
       'email': _emailController.text,
@@ -122,7 +141,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
     };
 
     try {
-      final url = Uri.parse('$baseUrl/halls');
+      final url = Uri.parse('$baseUrl/lodges');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -142,20 +161,13 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
 
         fetchHalls();
         fetchCounts();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Hall registered successfully")),
-        );
+        _showMessage("✅ Lodge registered successfully");
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Failed to add hall: ${response.body}')),
-        );
+        _showMessage('❌ Failed to add lodge: ${response.body}');
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e')),
-      );
+      _showMessage('❌ Error: $e');
     }
   }
 
@@ -175,15 +187,20 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
       controller: controller,
       keyboardType: keyboard,
       maxLines: maxLines,
-      style: const TextStyle(color: Color(0xFF5B6547)),
+      style:  TextStyle(color: royal),
+      cursorColor: royal,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF5B6547)),
+        labelStyle:  TextStyle(color: royal),
         border: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: royal, width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
         focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF5B6547), width: 2),
+          borderSide: BorderSide(color: royal, width: 2),
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
@@ -194,14 +211,14 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
     return Card(
       elevation: 10,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      color: const Color(0xFFE6DCC3),
-      shadowColor: const Color(0xFF5B6547).withValues(alpha:0.3),
+      color: Colors.white,
+      shadowColor: royal.withValues(alpha:0.3),
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Column(
           children: [
-            _buildTextField(_hallIdController, 'Hall ID (optional)'),
+            _buildTextField(_hallIdController, 'Lodge ID (optional)'),
             const SizedBox(height: 16),
             _buildTextField(_nameController, 'Name'),
             const SizedBox(height: 16),
@@ -213,10 +230,10 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _pickImage,
-              icon: const Icon(Icons.upload, color: Color(0xFF5B6547)),
-              label: const Text("Upload Logo", style: TextStyle(color: Color(0xFF5B6547))),
+              icon: const Icon(Icons.upload, color: royal),
+              label: const Text("Upload Logo", style: TextStyle(color: royal)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD8C9A9),
+                backgroundColor: Colors.white,
               ),
             ),
             if (_pickedImageBase64 != null)
@@ -224,18 +241,18 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
                 padding: const EdgeInsets.only(top: 16.0),
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundColor: const Color(0xFFD8C9A9),
+                  backgroundColor:Colors.white,
                   backgroundImage: MemoryImage(base64Decode(_pickedImageBase64!)),
                 ),
               ),
             const SizedBox(height: 24),
             _isLoading
-                ? const CircularProgressIndicator(color: Color(0xFF5B6547))
+                ? const CircularProgressIndicator(color: royal)
                 : ElevatedButton(
               onPressed: addHall,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5B6547),
-                foregroundColor: const Color(0xFFD8C9A9),
+                backgroundColor:  royal,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -255,8 +272,8 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
       child: Card(
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        color: const Color(0xFFE6DCC3),
-        shadowColor: const Color(0xFF5B6547).withValues(alpha:0.3),
+        color: Colors.white,
+        shadowColor: royal.withValues(alpha:0.3),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -267,7 +284,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5B6547),
+                  color: royal,
                 ),
               ),
               const SizedBox(height: 8),
@@ -275,7 +292,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
                 title,
                 style: const TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF5B6547),
+                  color: royal,
                 ),
               ),
             ],
@@ -295,15 +312,15 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
             builder: (_) => HomePageWithSelectedHall(selectedHall: hall),
           ),
         );
-        // Refresh halls after returning
         fetchHalls();
         fetchCounts();
       },
       child: Card(
-        elevation: 10,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        color: const Color(0xFFE6DCC3),
-        shadowColor: const Color(0xFF5B6547).withValues(alpha:0.3),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: royal,width: 1)),
+        color: Colors.white,
+        shadowColor: royal.withValues(alpha:0.3),
         margin: const EdgeInsets.symmetric(vertical: 10),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -311,12 +328,12 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: const Color(0xFFD8C9A9),
+                backgroundColor: royalLight.withValues(alpha: 0.3),
                 backgroundImage: hall['logo'] != null
                     ? MemoryImage(base64Decode(hall['logo']))
                     : null,
                 child: hall['logo'] == null
-                    ? const Icon(Icons.home_work, size: 40, color: Color(0xFF5B6547))
+                    ? const Icon(Icons.home_work, size: 40, color: royal)
                     : null,
               ),
               const SizedBox(width: 16),
@@ -329,7 +346,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5B6547),
+                        color: royal,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -337,7 +354,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
                       hall['address'] ?? 'No Address',
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF5B6547),
+                        color: royal,
                       ),
                     ),
                   ],
@@ -353,7 +370,7 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3EAD6),
+      backgroundColor: royalLight.withValues(alpha: 0.2),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -375,14 +392,14 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
               icon: Icon(
                 _showForm ? Icons.close : Icons.add_business,
                 size: 24,
-                color: const Color(0xFFD8C9A9),
+                color: Colors.white,
               ),
               label: Text(
-                _showForm ? "Close Form" : "Register Hall",
-                style: const TextStyle(fontSize: 18, color: Color(0xFFD8C9A9)),
+                _showForm ? "Close Form" : "Register Lodge",
+                style: const TextStyle(fontSize: 18, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5B6547),
+                backgroundColor: royal,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -391,9 +408,9 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildCountBox('Total Halls', _halls.length),
+                _buildCountBox('Lodges', _halls.length),
                 const SizedBox(width: 12),
-                _buildCountBox('Total Users', totalUsers),
+                _buildCountBox('Users', totalUsers),
                 const SizedBox(width: 12),
                 _buildCountBox('Bookings', totalBookings),
               ],
@@ -402,16 +419,16 @@ class _ManagePageState extends State<ManagePage> with RouteAware {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Registered Halls",
+                "Registered Lodges",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5B6547),
+                  color: royal,
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            ..._halls.map((hall) => _buildHallCard(hall)).toList(),
+            ..._halls.map((hall) => _buildHallCard(hall)),
             const SizedBox(height: 24),
           ],
         ),

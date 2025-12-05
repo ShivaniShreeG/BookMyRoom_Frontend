@@ -7,25 +7,21 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../public/config.dart';
 import '../../../../public/main_navigation.dart';
-import '../../../../utils/alternate_phone formatter.dart';
+import '../../../../public/alternate_phone_formatter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const Color royal = Color(0xFF19527A);
 
 class RoomBookingPage extends StatefulWidget {
-  final String roomType;
-  final String roomName;
   final DateTime checkIn;
   final DateTime checkOut;
-  final List<String> availableRooms;
+  final List<List<dynamic>> bookedRooms;
 
   const RoomBookingPage({
     super.key,
-    required this.roomType,
-    required this.roomName,
+    required this.bookedRooms,
     required this.checkIn,
     required this.checkOut,
-    required this.availableRooms,
   });
 
   @override
@@ -35,7 +31,7 @@ class RoomBookingPage extends StatefulWidget {
 class _RoomBookingPageState extends State<RoomBookingPage> {
   bool submitting = false;
   bool loadingPrice = true;
-  final TextEditingController advanceController = TextEditingController();
+  final TextEditingController advanceController = TextEditingController(text: "0");
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController altPhoneController = TextEditingController();
@@ -44,14 +40,17 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
   final TextEditingController balanceController = TextEditingController();
   final TextEditingController depositController = TextEditingController(text: "0");
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  List<TextEditingController> aadhaarControllers = [];
 
   double balance = 0;
   double deposit = 0.0;
+  String? selectedPaymentMethod;
 
   Map<String, dynamic>? pricingData;
   List<String> selectedRoomNumbers = [];
   Map<String, dynamic>? hallDetails;
   List<Uint8List?> guestIdBytes = [];
+  int visibleAadhaarCount = 1;
 
   String pricingType = "NORMAL";
   double? overriddenBaseAmount;
@@ -62,16 +61,35 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
   List<File?> guestIdProofs = [];
 
   final ImagePicker _picker = ImagePicker();
+  List<String> getAllRoomNumbers() {
+    List<String> allNumbers = [];
+    for (var room in widget.bookedRooms) {
+      List<String> nums = List<String>.from(room[2]);
+      allNumbers.addAll(nums);
+    }
+    return allNumbers;
+  }
+
+  List<Map<String, String>> getRoomDetails() {
+    return widget.bookedRooms.map((room) {
+      return {
+        "room_name": room[0].toString(),
+        "room_type": room[1].toString(),
+        "numbers": jsonEncode(room[2]),
+      };
+    }).toList();
+  }
 
   @override
   void initState() {
     super.initState();
-    selectedRoomNumbers = widget.availableRooms;
     guestIdProofs = List.generate(numGuests, (_) => null);
+    selectedRoomNumbers = getAllRoomNumbers();
     _fetchPricing();
     _fetchHallDetails();
     phoneController.addListener(_onPhoneChanged);
     guestIdBytes = List.generate(numGuests, (_) => null);
+    aadhaarControllers = List.generate(numGuests, (_) => TextEditingController());
     phoneController.text = '+91';
     phoneController.selection = TextSelection.fromPosition(
       TextPosition(offset: phoneController.text.length),
@@ -80,7 +98,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
 
   void _onPhoneChanged() {
     final phone = phoneController.text.trim();
-    // Only fetch if exactly 10 digits entered
     if (phone.length == 13) {
       _fetchBookingByPhone(phone);
     }
@@ -91,30 +108,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     phoneController.removeListener(_onPhoneChanged);
     phoneController.dispose();
     super.dispose();
-  }
-
-  void _updateGuests(int count) {
-    setState(() {
-      numGuests = count;
-
-      // Resize guestIdBytes
-      if (guestIdBytes.length < count) {
-        guestIdBytes.addAll(
-          List.generate(count - guestIdBytes.length, (_) => null),
-        );
-      } else if (guestIdBytes.length > count) {
-        guestIdBytes.removeRange(count, guestIdBytes.length);
-      }
-
-      // Resize guestIdProofs (THIS WAS MISSING)
-      if (guestIdProofs.length < count) {
-        guestIdProofs.addAll(
-          List.generate(count - guestIdProofs.length, (_) => null),
-        );
-      } else if (guestIdProofs.length > count) {
-        guestIdProofs.removeRange(count, guestIdProofs.length);
-      }
-    });
   }
 
   void _showMessage(String message) {
@@ -151,46 +144,83 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
   }
 
+  Future<void> _pickImage(int index) async {
+    if (index >= guestIdBytes.length || index >= guestIdProofs.length) {
+      _showMessage("Guest list not ready yet. Try again.");
+      return;
+    }
 
-// -------------------- TABLE ALIGNMENT BUILDER --------------------
-  Widget buildLabelValue(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(94),
-          1: FixedColumnWidth(5),
-          2: FlexColumnWidth(),
-        },
-        children: [
-          TableRow(
-            children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15,color: royal)),
-              const Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15,color: royal)),
-              Text(value, style: const TextStyle(fontSize: 15,color: royal)),
-            ],
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: royal),
+        ),
+        title: Text(
+          "Select Image Source",
+          style: const TextStyle(
+            color: royal,
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Choose the source for the guest ID",
+              style: TextStyle(color: royal),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, ImageSource.camera),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: royal,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Camera"),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, ImageSource.gallery),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: royal,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Gallery"),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, null),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: royal,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Cancel"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-  }
 
-  Future<void> _pickImage(int index) async {
+    if (source == null) return;
+
     try {
-      // Safety check
-      if (index >= guestIdBytes.length || index >= guestIdProofs.length) {
-        _showMessage("Guest list not ready yet. Try again.");
-        return;
-      }
-
       final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 70,
         maxWidth: 1080,
         maxHeight: 1920,
@@ -200,11 +230,10 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
         final bytes = await pickedFile.readAsBytes();
 
         setState(() {
-          guestIdBytes[index] = bytes;                 // for preview
-          guestIdProofs[index] = File(pickedFile.path); // for upload
+          guestIdBytes[index] = bytes;
+          guestIdProofs[index] = File(pickedFile.path);
         });
       }
-
     } catch (e) {
       _showMessage("Error picking image: $e");
     }
@@ -223,43 +252,44 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
 
       final body = {
         "lodge_id": lodgeId,
-        "room_type": widget.roomType,
-        "room_name": widget.roomName,
+        "booked_rooms": widget.bookedRooms,
         "check_in": widget.checkIn.toIso8601String(),
         "check_out": widget.checkOut.toIso8601String(),
-        "room_count": selectedRoomNumbers.length,
       };
 
       if (newPricingType != null) body["pricing_type"] = newPricingType;
 
-      final url = newPricingType != null
-          ? Uri.parse("$baseUrl/calendar/update-pricing")
-          : Uri.parse("$baseUrl/calendar/calculate-pricing");
+      final url = Uri.parse(
+          "$baseUrl/calendar/${newPricingType != null ? "update-pricing" : "calculate-pricing"}"
+      );
 
       final response = await http.post(
         url,
-        body: jsonEncode(body),
         headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         setState(() {
-          pricingType = data["status"];
+          pricingType = (data["status"] ?? "NORMAL").toString();
           pricingData = {
-            "room_count": data["room_count"],
-            "base_amount": data["base_amount_per_room"],
+            "gst_rate": data["gst_rate"],
+            "num_days": data["num_days"],
             "total_base": data["total_base_amount"],
             "gst": data["gst_amount"],
-            "gst_rate": data["gst_rate"],
             "grand_total": data["total_amount"],
-            "num_days": data["num_days"],
-            "type": data["status"],
+            "groups": data["rooms"],
           };
-          overriddenBaseAmount = data["base_amount_per_room"].toDouble();
-        });
-        _recalculatePricing();
 
+          if (data["rooms"] != null && data["rooms"].isNotEmpty) {
+            overriddenBaseAmount =
+                data["rooms"][0]["base_amount_per_room"]?.toDouble();
+          }
+        });
+
+        _recalculateGroupPricing();
       } else {
         _showMessage("Pricing error: ${response.body}");
       }
@@ -270,157 +300,856 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     }
   }
 
-  // Widget _guestsSection() {
-  //   return Stack(
-  //     clipBehavior: Clip.none,
-  //     children: [
-  //       Container(
-  //         decoration: BoxDecoration(
-  //           border: Border.all(color: royal, width: 1.5),
-  //           borderRadius: BorderRadius.circular(12),
-  //         ),
-  //         padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
-  //         child: Column(
-  //           children: [
-  //             const SizedBox(height: 10),
-  //             // Number of Guests
-  //             Row(
-  //               children: [
-  //                 const Expanded(
-  //                   flex: 2,
-  //                   child: Text(
-  //                     "Number of Guests",
-  //                     style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-  //                   ),
-  //                 ),
-  //                 const SizedBox(width: 10),
-  //                 Expanded(
-  //                   flex: 3,
-  //                   child: TextFormField(
-  //                     initialValue: numGuests.toString(),
-  //                     keyboardType: TextInputType.number,
-  //                     cursorColor: royal,
-  //                     style: TextStyle(color: royal),
-  //                     decoration: InputDecoration(
-  //                       border: OutlineInputBorder(
-  //                         borderRadius: BorderRadius.circular(8),
-  //                       ),
-  //                       enabledBorder: OutlineInputBorder(
-  //                         borderSide: BorderSide(color: royal, width: 1),
-  //                         borderRadius: BorderRadius.circular(12),
-  //                       ),
-  //                       focusedBorder: OutlineInputBorder(
-  //                         borderSide: BorderSide(color: royal, width: 2),
-  //                         borderRadius: BorderRadius.circular(12),
-  //                       ),
-  //                       filled: true,
-  //                       fillColor: royal.withValues(alpha: 0.05),
-  //                       isDense: true,
-  //                       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-  //                     ),
-  //
-  //                     onChanged: (val) {
-  //                       final count = int.tryParse(val) ?? 1;
-  //                       if (count > 0) _updateGuests(count);
-  //                     },
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //             const SizedBox(height: 15),
-  //             // Guest ID uploads
-  //             Column(
-  //               children: List.generate(numGuests, (index) {
-  //                 return Padding(
-  //                   padding: const EdgeInsets.symmetric(vertical: 5),
-  //                   child: Row(
-  //                     children: [
-  //                       Flexible(
-  //                         flex: 2,
-  //                         child: GestureDetector(
-  //                           onTap: () {
-  //                             final bytes = guestIdBytes[index];
-  //                             if (bytes != null) {
-  //                               showDialog(
-  //                                 context: context,
-  //                                 builder: (_) => Dialog(
-  //                                   child: ClipRRect(
-  //                                     borderRadius: BorderRadius.circular(8),
-  //                                     child: SizedBox(
-  //                                       width: 300,
-  //                                       height: 400,
-  //                                       child: Image.memory(
-  //                                         bytes,
-  //                                         fit: BoxFit.contain,
-  //                                       ),
-  //                                     ),
-  //                                   ),
-  //                                 ),
-  //                               );
-  //                             } else {
-  //                               _showMessage("No image selected for Guest ${index + 1}");
-  //                             }
-  //                           },
-  //                           child: Row(
-  //                             children: [
-  //                               Text(
-  //                                 "Guest ${index + 1} ID",
-  //                                 style: const TextStyle(
-  //                                     fontWeight: FontWeight.bold, color: royal),
-  //                               ),
-  //                               if (guestIdBytes[index] != null) ...[
-  //                                 const SizedBox(width: 5),
-  //                                 const Icon(Icons.preview, size: 18, color: royal),
-  //                               ],
-  //                             ],
-  //                           ),
-  //                         ),
-  //                       ),
-  //                       const SizedBox(width: 10),
-  //                       Flexible(
-  //                         flex: 3,
-  //                         child: ElevatedButton(
-  //                           style: ElevatedButton.styleFrom(
-  //                             backgroundColor: royal,
-  //                             foregroundColor: Colors.white,
-  //                             minimumSize: const Size(170, 36),
-  //                           ),
-  //                           onPressed: () => _pickImage(index),
-  //                           child: Text(
-  //                             guestIdBytes[index] != null ? "Selected" : "Upload",
-  //                           ),
-  //                         ),
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 );
-  //               }),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //       Positioned(
-  //         top: -12,
-  //         left: 0,
-  //         right: 0,
-  //         child: Align(
-  //           alignment: Alignment.topCenter,
-  //           child: Container(
-  //             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-  //             decoration: BoxDecoration(
-  //               color: royal,
-  //               borderRadius: BorderRadius.circular(6),
-  //             ),
-  //             child: const Text(
-  //               "GUESTS",
-  //               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-  //             ),
-  //           ),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
+  Future<void> _bookRooms() async {
+    if (!_formKey.currentState!.validate()) {
+      _showMessage("Please fill all required fields");
+      return;
+    }
+    if (selectedRoomNumbers.isEmpty) {
+      _showMessage("Select at least one room.");
+      return;
+    }
+
+    final validProofs = guestIdProofs.where((file) => file != null).toList();
+
+    if (validProofs.isEmpty) {
+      _showMessage("Please upload at least one guest ID proof.");
+      return;
+    }
+    final paymentMethod = await _selectPaymentMethod();
+    if (paymentMethod == null) {
+      _showMessage("Please select a payment method");
+      return;
+    }
+    selectedPaymentMethod = paymentMethod;
+    final prefs = await SharedPreferences.getInstance();
+    final lodgeId = prefs.getInt("lodgeId");
+    final userId = prefs.getString("userId");
+
+    if (lodgeId == null || userId == null) {
+      _showMessage("Lodge ID or User ID not found!");
+      return;
+    }
+
+    setState(() => submitting = true);
+
+    final roomCount = selectedRoomNumbers.length;
+    final numDays = pricingData?["num_days"] ?? 1;
+    final totalBase = pricingData?["total_base"] ?? 0.0;
+    final gstAmount = pricingData?["gst"] ?? 0.0;
+    final grandTotal = pricingData?["grand_total"] ?? 0.0;
+    final advance = double.tryParse(advanceController.text) ?? 0.0;
+    final deposit = double.tryParse(depositController.text) ?? 0.0;
+    final balance = grandTotal - advance;
+
+    final roomsPayload = (pricingData?["groups"] as List<dynamic>? ?? []).map((group) {
+      return {
+        "room_name": group["room_name"],
+        "room_type": group["room_type"],
+        "room_count": group["room_count"],
+        "base_amount_per_room": group["base_amount_per_room"],
+        "group_total_base_amount": group["group_total_base_amount"],
+      };
+    }).toList();
+
+    final uri = Uri.parse("$baseUrl/booking/create");
+    var request = http.MultipartRequest('POST', uri);
+
+    request.fields.addAll({
+      "lodge_id": lodgeId.toString(),
+      "user_id": userId,
+      "name": nameController.text,
+      "phone": phoneController.text,
+      "alternate_phone": altPhoneController.text,
+      "email": emailController.text,
+      "address": addressController.text,
+      "numberofguest": numGuests.toString(),
+      "aadhar_number": jsonEncode(
+        aadhaarControllers.map((c) => c.text.trim()).where((text) => text.isNotEmpty).toList(),
+      ),
+      "specification": jsonEncode({
+        "number_of_days": numDays,
+        "number_of_rooms": roomCount,
+      }),
+      "check_in": widget.checkIn.toIso8601String(),
+      "check_out": widget.checkOut.toIso8601String(),
+      "baseamount": totalBase.toString(),
+      "gst": gstAmount.toString(),
+      "amount": grandTotal.toString(),
+      "advance": advance.toString(),
+      "deposite": deposit.toString(),
+      "balance": balance.toString(),
+      "rooms": jsonEncode(roomsPayload),
+      "booked_rooms": jsonEncode(widget.bookedRooms),
+      "payment_method": selectedPaymentMethod!,
+    });
+
+    for (int i = 0; i < validProofs.length; i++) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'id_proofs',
+          validProofs[i]!.path,
+        ),
+      );
+    }
+    final streamedResponse = await request.send();
+    final respBody = await streamedResponse.stream.bytesToString();
+    dynamic responseJson;
+
+    try {
+      responseJson = jsonDecode(respBody);
+    } catch (e) {
+      responseJson = {"message": respBody};
+    }
+
+    setState(() => submitting = false);
+
+    if (streamedResponse.statusCode == 200 ||streamedResponse.statusCode == 201) {
+      _showMessage(responseJson['message'] ?? 'Booking Successful!');
+      if(!mounted) return;
+      setState(() {
+        bookingSuccess = true;
+        bookingResponse = responseJson['booking'];
+      });
+    } else {
+      _showMessage("Booking failed: ${responseJson['message'] ?? respBody}");
+    }
+  }
+
+  Widget _paymentSection() {
+    if (pricingData == null) return const SizedBox();
+
+    final groups = pricingData!["groups"] ?? [];
+    final numDays = pricingData!["num_days"] ?? 1;
+
+    const double labelWidth = 120;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: royal, width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  SizedBox(
+                    width: labelWidth,
+                    child: const Text(
+                      "Pricing Type",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: royal,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: royalLight.withValues(alpha: 0.1),
+                        border: Border.all(color: royal, width: 1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: pricingType,
+                          isExpanded: true,
+                          alignment: Alignment.centerRight,
+                          dropdownColor: Colors.white,
+                          icon: const Icon(Icons.arrow_drop_down, color: royal),
+                          style: const TextStyle(
+                            color: royal,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "NORMAL",
+                              child: Text("Normal", style: TextStyle(color: royal)),
+                            ),
+                            DropdownMenuItem(
+                              value: "PEAK_HOUR",
+                              child: Text("Peak Hour", style: TextStyle(color: royal)),
+                            ),
+                          ],
+                          onChanged: (value) async {
+                            if (value == null) return;
+                            setState(() => pricingType = value);
+                            await _fetchPricing(newPricingType: value);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _labelValueRowStyled("Total Rooms", selectedRoomNumbers.length.toString(), labelWidth),
+              const SizedBox(height: 10),
+              _labelValueRowStyled("No of Days", numDays.toString(), labelWidth),
+              const SizedBox(height: 10),
+              ...groups.map<Widget>((group) {
+                final name = group["room_name"];
+                final type = group["room_type"];
+                final count = group["room_count"];
+                final base = group["base_amount_per_room"];
+                final groupTotal = group["group_total_base_amount"];
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Center(
+                        child: Text(
+                          "$name - $type",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: royal,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _labelValueRowStyled("Rooms", count.toString(), labelWidth),
+                    const SizedBox(height: 10),
+                    _editableRow(
+                      "Base",
+                      labelWidth,
+                          (val) {
+                        final newBase = double.tryParse(val);
+                        if (newBase != null) {
+                          group["base_amount_per_room"] = newBase;
+                          group["group_total_base_amount"] =
+                              newBase * group["room_count"] * numDays;
+                          _recalculateGroupPricing();
+                        }
+                      },
+                      initialValue: base.toString(),
+                    ),
+                    const SizedBox(height: 10),
+                    _labelValueRowStyled("Total", "₹${groupTotal.toString()}", labelWidth),
+                    const SizedBox(height: 10),
+                  ],
+                );
+              }),
+              Divider(
+                color: royal,
+                thickness: 1,
+                height: 20,
+              ),
+              _labelValueRowStyled("Total Base", pricingData!["total_base"].toString(), labelWidth),
+              const SizedBox(height: 10),
+              _labelValueRowStyled("GST ${pricingData!["gst_rate"]}%", pricingData!["gst"].toString(), labelWidth),
+              const SizedBox(height: 10),
+              _labelValueRowStyled("Grand Total", pricingData!["grand_total"].toString(), labelWidth, bold: true),
+              const SizedBox(height: 10),
+              _editableRow(
+                "Advance",
+                labelWidth,
+                    (val) {
+                  final advance = double.tryParse(val) ?? 0;
+                  final grandTotal = pricingData!["grand_total"] ?? 0;
+                  setState(() {
+                    balanceController.text = (grandTotal - advance).toStringAsFixed(2);
+                  });
+                },
+                controller: advanceController,
+              ),
+              const SizedBox(height: 10),
+              _editableRow(
+                "Deposit",
+                labelWidth,
+                    (val) {
+                },
+                controller: depositController,
+              ),
+              const SizedBox(height: 10),
+              _labelValueRowStyled("Balance", balanceController.text, labelWidth, bold: true),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+        Positioned(
+          top: -12,
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              decoration: BoxDecoration(
+                color: royal,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                "PRICE DETAILS",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _labelValueRowStyled(String label, String value, double labelWidth, {bool bold = false}) {
+    final controller = TextEditingController(text: value);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: labelWidth,
+          child: Text(
+            label,
+            style: TextStyle(fontWeight: FontWeight.bold, color: royal),
+          ),
+        ),
+        Expanded(
+          child: TextField(
+            readOnly: true,
+            controller: controller,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+              color: royal,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: royalLight.withValues(alpha: 0.1),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _editableRow(
+      String label,
+      double width,
+      Function(String) onChanged, {
+        TextEditingController? controller,
+        String? initialValue,
+      }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: width,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: royal,
+            ),
+          ),
+        ),
+        Expanded(
+          child: TextFormField(
+            cursorColor: royal,
+            controller: controller,
+            initialValue: controller == null ? initialValue : null,
+            textAlign: TextAlign.right,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              fontSize: 14,
+              color: royal,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: royalLight.withValues(alpha: 0.1),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: royal, width: 2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: (val) {
+              onChanged(val);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+  Future<String?> _selectPaymentMethod() async {
+    return await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: royal, width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Select Payment Method",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: royal,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context, "CASH"),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: royalLight.withAlpha(40),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: royal, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.money, color: royal, size: 28),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Cash",
+                                style: TextStyle(
+                                  color: royal,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context, "ONLINE"),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          margin: const EdgeInsets.only(left: 8),
+                          decoration: BoxDecoration(
+                            color: royalLight.withAlpha(40),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: royal, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.phone_iphone, color: royal, size: 28),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Online",
+                                style: TextStyle(
+                                  color: royal,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _recalculateGroupPricing() {
+    final groups = pricingData!["groups"];
+    final gstRate = pricingData!["gst_rate"] ?? 18;
+
+    double newTotalBase = 0;
+
+    for (var grp in groups) {
+      newTotalBase += (grp["group_total_base_amount"] ?? 0.0).toDouble();
+    }
+
+    final gstAmount = (newTotalBase * gstRate / 100);
+    final grandTotal = newTotalBase + gstAmount;
+
+    setState(() {
+      pricingData!["total_base"] = newTotalBase;
+      pricingData!["gst"] = gstAmount;
+      pricingData!["grand_total"] = grandTotal;
+
+      final advance = double.tryParse(advanceController.text) ?? 0.0;
+      balanceController.text = (grandTotal - advance).toStringAsFixed(2);
+    });
+  }
+
+  Widget buildLabelValueBooking(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(80),
+          1: FixedColumnWidth(5),
+          2: FlexColumnWidth(),
+        },
+        children: [
+          TableRow(
+            children: [
+              Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12,color: royal)),
+              const Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,color: royal)),
+              Text(value, style: const TextStyle(fontSize: 12,color: royal)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget bookingDetailsCard({
+    required Map<String, dynamic> booking,
+    required Color royal,
+  }) {
+
+    String formatTo12Hour(DateTime dt) {
+      return "${dt.day.toString().padLeft(2, '0')}-"
+          "${dt.month.toString().padLeft(2, '0')}-"
+          "${dt.year} "
+          "${(dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0')}:"
+          "${dt.minute.toString().padLeft(2, '0')} "
+          "${dt.hour >= 12 ? "PM" : "AM"}";
+    }
+
+    String formatDateTime(String? dateTimeStr) {
+      if (dateTimeStr == null) return 'N/A';
+      try {
+        final dt = DateTime.parse(dateTimeStr);
+        return formatTo12Hour(dt);
+      } catch (e) {
+        return 'Invalid date';
+      }
+    }
+    final bookedRooms = booking['booked_room'] as List<dynamic>?;
+    final idProofs = booking['id_proof'] as List<dynamic>?;
+    final aadhaarList = (booking['aadhar_number'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList();
+
+    List<String> alternatePhones = [];
+    if (booking['alternate_phone'] != null &&
+        booking['alternate_phone'].toString().isNotEmpty) {
+      try {
+        final alt = jsonDecode(booking['alternate_phone'].toString());
+        if (alt is List) alternatePhones = alt.map((e) => e.toString()).toList();
+      } catch (_) {
+        alternatePhones =
+            booking['alternate_phone'].toString().split(',').map((e) => e.trim()).toList();
+      }
+    }
+
+    String generateShareText() {
+
+      final buffer = StringBuffer();
+
+      buffer.writeln("```");
+      buffer.writeln("   Booking Confirmation");
+      buffer.writeln("---------------------------");
+      buffer.writeln("This is your official booking confirmation"
+          " message from ${hallDetails?['name']},${hallDetails?['address']}");
+      buffer.writeln("");
+
+      buffer.writeln("Booking ID  : ${booking['booking_id']}");
+      buffer.writeln("⚠️ Keep your Booking ID for future reference.");
+      buffer.writeln("");
+
+      buffer.writeln("     Booking Details");
+      buffer.writeln("");
+
+      buffer.writeln("Name      : ${booking['name']}");
+      buffer.writeln("Phone     : ${booking['phone']}");
+
+      if (alternatePhones.isNotEmpty) {
+        buffer.writeln("Alt Phone : ${alternatePhones.join(', ')}");
+      }
+
+      if (booking['email'] != null) {
+        buffer.writeln("Email     : ${booking['email']}");
+      }
+
+      if (booking['address'] != null) {
+        buffer.writeln("Address   : ${booking['address']}");
+      }
+
+      buffer.writeln("");
+
+      buffer.writeln("       Booking Info");
+      buffer.writeln("");
+
+      buffer.writeln("Check-in     : ${formatDateTime(booking['check_in'])}");
+      buffer.writeln("Check-out    : ${formatDateTime(booking['check_out'])}");
+
+      if (bookedRooms != null && bookedRooms.isNotEmpty) {
+        for (var room in bookedRooms) {
+          final name = room[0]?.toString() ?? '';
+          final type = room[1]?.toString() ?? '';
+          final nums = List<String>.from(room[2] ?? []);
+
+          buffer.writeln("Room Type    : $type - $name");
+          if (nums.isNotEmpty) {
+            buffer.writeln("Room Numbers : ${nums.join(', ')}");
+          }
+          buffer.writeln("");
+        }
+      }
+
+      if (booking['numberofguest'] != null) {
+        buffer.writeln("No. of Guests: ${booking['numberofguest']}");
+      }
+
+      buffer.writeln("");
+      buffer.writeln("      Payment Details");
+      buffer.writeln("");
+
+      buffer.writeln("Base Amount     : ${booking['baseamount']}");
+      buffer.writeln("GST             : ${booking['gst']}");
+      buffer.writeln("Total Amount    : ${booking['amount']}");
+      buffer.writeln("Advance Paid    : ${booking['advance']}");
+      buffer.writeln("Deposit Paid    : ${booking['deposite']}");
+
+
+      double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
+      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
+      double totalPaid = adv + dep;
+
+      if (dep > 0) {
+        buffer.writeln("Total Paid      : $totalPaid");
+      }
+
+      buffer.writeln("Balance         : ${booking['Balance'] ?? 0}");
+      buffer.writeln("");
+
+      buffer.writeln("---------------------------");
+      buffer.writeln("Thank you for choosing us! 😊");
+      buffer.writeln("```");
+
+      return buffer.toString();
+    }
+
+    Future<void> shareViaWhatsApp() async {
+      if (booking['phone'] == null || booking['phone'].toString().isEmpty) return;
+
+      final text = Uri.encodeComponent(generateShareText());
+      final phoneNumber = booking['phone'].toString().replaceAll(' ', '');
+      final url = 'https://wa.me/$phoneNumber?text=$text';
+
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url));
+      } else {
+        debugPrint("Cannot launch WhatsApp");
+      }
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border: Border.all(color: royal, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: royal.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                if (booking['name'] != null || booking['phone'] != null)
+                  Column(
+                    children: [
+                      if (booking['name'] != null)
+                        buildLabelValueBooking("Name", booking['name']),
+                      if (booking['phone'] != null)
+                        buildLabelValueBooking("Phone", booking['phone']),
+                      if (booking['address'] != null)
+                        buildLabelValueBooking("Address", booking['address']),
+                      if (alternatePhones.isNotEmpty)
+                        buildLabelValueBooking("Alt Phone", alternatePhones.join(', ')),
+                      if (booking['email'] != null)
+                        buildLabelValueBooking("Email", booking['email']),
+                    ],
+                  ),
+
+                const SizedBox(height: 15),
+                Divider(color: royal, thickness: 1),
+                const SizedBox(height: 10),
+
+                Column(
+                  children: [
+                    if (booking['check_in'] != null)
+                      buildLabelValueBooking("Check-in", formatDateTime(booking['check_in'])),
+                    if (booking['check_out'] != null)
+                      buildLabelValueBooking("Check-out", formatDateTime(booking['check_out'])),
+                    if (booking['numberofguest'] != null)
+                      buildLabelValueBooking("Guests", booking['numberofguest'].toString()),
+                    if (aadhaarList != null && aadhaarList.isNotEmpty)
+                      buildLabelValueBooking("Aadhaar Numbers", aadhaarList.join(', ')),
+                    if (idProofs != null && idProofs.isNotEmpty)
+                      buildLabelValueBooking("ID Proofs", idProofs.join(', ')),
+                    if (bookedRooms != null && bookedRooms.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                "Booked Rooms",
+                                style: TextStyle(
+                                  color: royal,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          ...bookedRooms.map((room) {
+                            final name = room[0]?.toString() ?? '';
+                            final type = room[1]?.toString() ?? '';
+                            final nums = List<String>.from(room[2] ?? []);
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 5),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  buildLabelValueBooking("Room", "$type - $name"),
+                                  if (nums.isNotEmpty)
+                                    buildLabelValueBooking("Room Numbers", nums.join(', ')),
+                                ],
+                              ),
+                            );
+                          })
+                        ],
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 15),
+                Divider(color: royal, thickness: 1),
+                const SizedBox(height: 10),
+                Column(
+                  children: [
+                    if (booking['baseamount'] != null)
+                      buildLabelValueBooking("Base Amount", booking['baseamount'].toString()),
+                    if (booking['gst'] != null)
+                      buildLabelValueBooking("GST", booking['gst'].toString()),
+                    if (booking['amount'] != null)
+                      buildLabelValueBooking("Total Amount", booking['amount'].toString()),
+                    if (booking['advance'] != null)
+                      buildLabelValueBooking("Advance", booking['advance'].toString()),
+                    if (booking['deposite'] != null)
+                      buildLabelValueBooking("Deposite", booking['deposite'].toString()),
+                    if (booking['deposite'] != null)
+                      buildLabelValueBooking("Total Paid",  (
+                          (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
+                              (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
+                      ).toString() ),
+                    if (booking['Balance'] != null)
+                      buildLabelValueBooking("Balance", booking['Balance'].toString()),
+                  ],
+                ),
+
+
+                const SizedBox(height: 20),
+
+                Center(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: royal),
+                    onPressed: shareViaWhatsApp,
+                    icon: const Icon(Icons.share, color: Colors.white),
+                    label: const Text(
+                      "Share via WhatsApp",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: 10,
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              decoration: BoxDecoration(
+                color: royal,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                "Booking ID: ${booking['booking_id']}",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _guestsSection() {
     return Stack(
@@ -436,7 +1165,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
             children: [
               const SizedBox(height: 10),
 
-              // ---------------- NUMBER OF GUESTS ----------------
               Row(
                 children: [
                   const Expanded(
@@ -467,7 +1195,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: royal.withValues(alpha: 0.05),
+                        fillColor: royal.withAlpha(12),
                         isDense: true,
                         contentPadding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -475,18 +1203,24 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                       onChanged: (val) {
                         int newCount = int.tryParse(val) ?? 1;
                         if (newCount < 1) newCount = 1;
-
                         setState(() {
                           numGuests = newCount;
 
-                          // --- If guest list is longer than new number, trim it ---
+                          if (visibleAadhaarCount > numGuests) {
+                            visibleAadhaarCount = numGuests;
+                          }
+                          if (aadhaarControllers.length > numGuests) {
+                            aadhaarControllers = aadhaarControllers.sublist(0, numGuests);
+                          } else if (aadhaarControllers.length < numGuests) {
+                            aadhaarControllers.addAll(
+                                List.generate(numGuests - aadhaarControllers.length, (_) => TextEditingController())
+                            );
+                          }
+
                           if (guestIdProofs.length > newCount) {
                             guestIdProofs = guestIdProofs.sublist(0, newCount);
                             guestIdBytes = guestIdBytes.sublist(0, newCount);
                           }
-
-                          // (If the user increases guest count, do nothing —
-                          // they must use + button to add new entries.)
                         });
                       },
                     ),
@@ -494,17 +1228,105 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 ],
               ),
 
+              const SizedBox(height: 10),
+
+              Column(
+                children: List.generate(visibleAadhaarCount, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            "Guest ${index + 1} Aadhaar",
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, color: royal),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: aadhaarControllers[index],
+                            keyboardType: TextInputType.visiblePassword,
+                            maxLength: 12,
+                            style: const TextStyle(color: royal),
+                            cursorColor: royal,
+                            decoration: InputDecoration(
+                              hintText: "Enter 12-digit Aadhaar",
+                              hintStyle: TextStyle(color: royal),
+                              counterText: "",
+                              filled: true,
+                              fillColor: royal.withAlpha(12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: royal, width: 1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: royal, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Aadhaar required";
+                              }
+                              if (value.length != 12) {
+                                return "Must be 12 digits";
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        if (visibleAadhaarCount > 1)
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                visibleAadhaarCount--;
+                              });
+                            },
+                            icon: Icon(Icons.remove_circle, color: Colors.red),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+
+              const SizedBox(height: 5),
+
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton.icon(
+                  onPressed: visibleAadhaarCount < numGuests
+                      ? () {
+                    setState(() {
+                      visibleAadhaarCount++;
+                    });
+                  }
+                      : null,
+                  icon: const Icon(Icons.add),
+                  label: const Text("Add Guest Aadhaar"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: visibleAadhaarCount < numGuests ? royal : Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 10),
 
-              // ---------------- GUEST UPLOAD LIST ----------------
               Column(
                 children: List.generate(guestIdProofs.length, (index) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     child: Row(
                       children: [
-                        // Guest Label with preview
                         Expanded(
                           flex: 2,
                           child: GestureDetector(
@@ -543,22 +1365,37 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 10),
-
-                        // Upload button
                         Expanded(
                           flex: 3,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: royal,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(170, 36),
-                            ),
-                            onPressed: () => _pickImage(index),
-                            child: Text(
-                              guestIdBytes[index] != null ? "Selected" : "Upload",
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: royal,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(170, 36),
+                                  ),
+                                  onPressed: () => _pickImage(index),
+                                  child: Text(
+                                    guestIdBytes[index] != null ? "Selected" : "Upload",
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              // Minus button for guest ID
+                              if (guestIdProofs.length > 1)
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      guestIdProofs.removeAt(index);
+                                      guestIdBytes.removeAt(index);
+                                    });
+                                  },
+                                  icon: Icon(Icons.remove_circle, color: Colors.red),
+                                ),
+                            ],
                           ),
                         ),
                       ],
@@ -567,25 +1404,23 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 }),
               ),
 
-
               const SizedBox(height: 12),
 
-              // ---------------- ADD GUEST UPLOAD BUTTON ----------------
               Align(
                 alignment: Alignment.center,
                 child: ElevatedButton.icon(
                   onPressed: guestIdProofs.length < numGuests
                       ? () {
                     setState(() {
-                      guestIdBytes.add(null);
                       guestIdProofs.add(null);
+                      guestIdBytes.add(null);
                     });
                   }
                       : null,
                   icon: const Icon(Icons.add),
                   label: const Text("Add Guest ID"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: royal,
+                    backgroundColor: guestIdProofs.length < numGuests ? royal : Colors.grey,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -617,934 +1452,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     );
   }
 
-  Future<void> _bookRooms() async {
-    if (!_formKey.currentState!.validate()) {
-      _showMessage("Please fill all required fields");
-      return;
-    }
-    if (selectedRoomNumbers.isEmpty) {
-      _showMessage("Select at least one room.");
-      return;
-    }
-
-    final validProofs = guestIdProofs.where((file) => file != null).toList();
-
-    if (validProofs.isEmpty) {
-      _showMessage("Please upload at least one guest ID proof.");
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    final lodgeId = prefs.getInt("lodgeId");
-    final userId = prefs.getString("userId");
-
-    if (lodgeId == null || userId == null) {
-      _showMessage("Lodge ID or User ID not found!");
-      return;
-    }
-
-    setState(() => submitting = true);
-
-    final roomCount = selectedRoomNumbers.length;
-    final numDays = pricingData?["num_days"] ?? 1;
-    final baseAmount = pricingData?["total_base"] ?? 0.0;
-    final gstAmount = pricingData?["gst"] ?? 0.0;
-    final grandTotal = pricingData?["grand_total"] ?? 0.0;
-    final advance = double.tryParse(advanceController.text) ?? 0.0;
-    final balanceAmount = grandTotal - advance;
-    final deposite = double.tryParse(depositController.text) ?? 0.0;
-    // Use MultipartRequest
-    final uri = Uri.parse("$baseUrl/booking/create");
-    var request = http.MultipartRequest('POST', uri);
-
-    // Add form fields
-    request.fields.addAll({
-      "lodge_id": lodgeId.toString(),
-      "user_id": userId,
-      "name": nameController.text,
-      "phone": phoneController.text,
-      "alternate_phone": altPhoneController.text,
-      "email": emailController.text,
-      "address": addressController.text,
-      "numberofguest": numGuests.toString(),
-      "specification": jsonEncode({
-        "number_of_days": numDays,
-        "number_of_rooms": roomCount,
-      }),
-      "check_in": widget.checkIn.toIso8601String(),
-      "check_out": widget.checkOut.toIso8601String(),
-      "baseamount": baseAmount.toString(),
-      "gst": gstAmount.toString(),
-      "amount": grandTotal.toString(),
-      "advance": advance.toString(),
-      "balance": balanceAmount.toString(),
-      "room_name": widget.roomName,
-      "room_type": widget.roomType,
-      "room_number": jsonEncode(selectedRoomNumbers),
-      "deposite":deposite.toString(),
-    });
-
-    for (int i = 0; i < validProofs.length; i++) {
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'id_proofs',
-          validProofs[i]!.path,
-        ),
-      );
-    }
-
-    // Debug print
-    // print("Submitting booking with fields:");
-    request.fields.forEach((key, value) {
-      // print("$key: $value");
-    });
-    // print("Files:");
-    // for (var f in request.files) {
-    //   print(f.filename);
-    // }
-
-    // Send request
-    final streamedResponse = await request.send();
-    final respBody = await streamedResponse.stream.bytesToString();
-    dynamic responseJson;
-
-    try {
-      responseJson = jsonDecode(respBody);
-    } catch (e) {
-      responseJson = {"message": respBody};
-    }
-
-    setState(() => submitting = false);
-
-    if (streamedResponse.statusCode == 200 ||streamedResponse.statusCode == 201) {
-      _showMessage(responseJson['message'] ?? 'Booking Successful!');
-      if(!mounted) return;
-      setState(() {
-        bookingSuccess = true;
-        bookingResponse = responseJson['booking']; // <-- store only booking object
-      });
-    } else {
-      _showMessage("Booking failed: ${responseJson['message'] ?? respBody}");
-    }
-  }
-
-  Widget bookingDetailsCard({
-    required Map<String, dynamic> booking,
-    required Color royal,
-  }) {
-    // Date formatting helper
-    String formatTo12Hour(DateTime dt) {
-      return "${dt.day.toString().padLeft(2, '0')}-"
-          "${dt.month.toString().padLeft(2, '0')}-"
-          "${dt.year} "
-          "${(dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0')}:"
-          "${dt.minute.toString().padLeft(2, '0')} "
-          "${dt.hour >= 12 ? "PM" : "AM"}";
-    }
-
-    String formatDateTime(String? dateTimeStr) {
-      if (dateTimeStr == null) return 'N/A';
-      try {
-        final dt = DateTime.parse(dateTimeStr);
-        return formatTo12Hour(dt);
-      } catch (e) {
-        return 'Invalid date';
-      }
-    }
-
-    final roomNumbers = booking['room_number'] as List<dynamic>?;
-    final idProofs = booking['id_proof'] as List<dynamic>?;
-
-    // Parse alternate phone
-    List<String> alternatePhones = [];
-    if (booking['alternate_phone'] != null &&
-        booking['alternate_phone'].toString().isNotEmpty) {
-      try {
-        final alt = jsonDecode(booking['alternate_phone'].toString());
-        if (alt is List) alternatePhones = alt.map((e) => e.toString()).toList();
-      } catch (_) {
-        alternatePhones =
-            booking['alternate_phone'].toString().split(',').map((e) => e.trim()).toList();
-      }
-    }
-
-    // ---------------- ALIGNED TEXT FOR WHATSAPP ----------------
-    String generateShareText() {
-      String s(dynamic v) => v?.toString() ?? "N/A";
-
-      String formatLine(String label, dynamic value) {
-        return "${label.padRight(13)} : ${s(value)}";
-      }
-
-      final buffer = StringBuffer();
-
-      buffer.writeln("```"); // Start monospace block
-
-      // BOOKING CONFIRMATION HEADER
-      buffer.writeln("   Booking Confirmation");
-      buffer.writeln("---------------------------");
-
-      // HALL / LODGE NAME
-      // buffer.writeln("${hallDetails?['name'] ?? 'Lodge / Hotel'}");
-      buffer.writeln("This is your official booking confirmation message from ${hallDetails?['name']}.");
-      buffer.writeln("");
-
-      // Booking ID
-      buffer.writeln(formatLine("Booking ID", booking['booking_id']));
-      buffer.writeln("⚠️ Keep your Booking ID for future reference.");
-      buffer.writeln("");
-      buffer.writeln("        Booking Details");
-      buffer.writeln(formatLine("Name", booking['name']));
-      buffer.writeln(formatLine("Phone", booking['phone']));
-
-      // if (alternatePhones.isNotEmpty)
-      //   buffer.writeln(formatLine("Alt Phone", alternatePhones.join(', ')));
-      //
-      // if (booking['email'] != null)
-      //   buffer.writeln(formatLine("Email", booking['email']));
-      //
-      // if (booking['address'] != null)
-      //   buffer.writeln(formatLine("Address", booking['address']));
-
-      buffer.writeln("");
-
-      // BOOKING INFO
-      // buffer.writeln("         *Booking Info*");
-      buffer.writeln(formatLine("Check-in", formatDateTime(booking['check_in'])));
-      buffer.writeln(formatLine("Check-out", formatDateTime(booking['check_out'])));
-
-      // Room + Type in one line
-      if (booking['room_name'] != null || booking['room_type'] != null) {
-        String roomInfo =
-        "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim();
-        buffer.writeln(formatLine("Room Type", roomInfo));
-      }
-
-      if (roomNumbers != null && roomNumbers.isNotEmpty) buffer.writeln(formatLine("Room Number", roomNumbers.join(', ')));
-
-      // if (booking['numberofguest'] != null)
-      //   buffer.writeln(formatLine("Guests", booking['numberofguest']));
-      //
-      // if (idProofs != null && idProofs.isNotEmpty)
-      //   buffer.writeln(formatLine("ID Proofs", idProofs.join(', ')));
-      // PAYMENT DETAILS FIRST (as you requested)
-      buffer.writeln("       Payment Details");
-
-      if (booking['baseamount'] != null) buffer.writeln(formatLine("Base Amount", booking['baseamount']));
-
-      if (booking['gst'] != null) buffer.writeln(formatLine("GST", booking['gst']));
-
-      if (booking['amount'] != null) buffer.writeln(formatLine("Total Amount", booking['amount']));
-
-      if (booking['advance'] != null) buffer.writeln(formatLine("Advance", booking['advance']));
-
-      if (booking['deposite'] != null) buffer.writeln(formatLine("Deposite", booking['deposite']));
-
-      // TOTAL PAID = ADVANCE + DEPOSITE
-      double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
-      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
-      double totalPaid = adv + dep;
-
-      if (dep > 0) buffer.writeln(formatLine("Total Paid", totalPaid));
-
-      if (booking['Balance'] != null) buffer.writeln(formatLine("Balance", booking['Balance']));
-
-      buffer.writeln("");
-
-      buffer.writeln("----------------------------------");
-      buffer.writeln("Thank you for choosing us! 😊");
-      buffer.writeln("```"); // End monospace block
-
-      return buffer.toString();
-    }
-
-    Future<void> shareViaWhatsApp() async {
-      if (booking['phone'] == null || booking['phone'].toString().isEmpty) return;
-
-      final text = Uri.encodeComponent(generateShareText());
-      final phoneNumber = booking['phone'].toString().replaceAll(' ', '');
-      final url = 'https://wa.me/$phoneNumber?text=$text';
-
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        debugPrint("Cannot launch WhatsApp");
-      }
-    }
-
-    // -------------------- RETURN UI --------------------
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border.all(color: royal, width: 2),
-              borderRadius: BorderRadius.circular(16),
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: royal.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-
-                // PERSONAL INFO
-                if (booking['name'] != null || booking['phone'] != null)
-                  Column(
-                    children: [
-                      if (booking['name'] != null)
-                        buildLabelValue("Name", booking['name']),
-                      if (booking['phone'] != null)
-                        buildLabelValue("Phone", booking['phone']),
-                      if (booking['address'] != null)
-                        buildLabelValue("Address", booking['address']),
-                      if (alternatePhones.isNotEmpty)
-                        buildLabelValue("Alt Phone", alternatePhones.join(', ')),
-                      if (booking['email'] != null)
-                        buildLabelValue("Email", booking['email']),
-                    ],
-                  ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // BOOKING INFO
-                Column(
-                  children: [
-                    if (booking['check_in'] != null)
-                      buildLabelValue("Check-in", formatDateTime(booking['check_in'])),
-                    if (booking['check_out'] != null)
-                      buildLabelValue("Check-out", formatDateTime(booking['check_out'])),
-                    if (booking['room_name'] != null || booking['room_type'] != null)
-                      buildLabelValue(
-                        "Room",
-                        "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim(),
-                      ),
-                    if (roomNumbers != null && roomNumbers.isNotEmpty)
-                      buildLabelValue("Room Number", roomNumbers.join(', ')),
-                    if (booking['numberofguest'] != null)
-                      buildLabelValue("Guests", booking['numberofguest'].toString()),
-                    if (idProofs != null && idProofs.isNotEmpty)
-                      buildLabelValue("ID Proofs", idProofs.join(', ')),
-                  ],
-                ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // PAYMENT INFO
-                Column(
-                  children: [
-                    if (booking['baseamount'] != null)
-                      buildLabelValue("Base Amount", booking['baseamount'].toString()),
-                    if (booking['gst'] != null)
-                      buildLabelValue("GST", booking['gst'].toString()),
-                    if (booking['amount'] != null)
-                      buildLabelValue("Total Amount", booking['amount'].toString()),
-                    if (booking['advance'] != null)
-                      buildLabelValue("Advance", booking['advance'].toString()),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Deposite", booking['deposite'].toString()),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Total Paid",  (
-                          (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
-                              (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
-                      ).toString() ),
-                    if (booking['Balance'] != null)
-                      buildLabelValue("Balance", booking['Balance'].toString()),
-                  ],
-                ),
-
-
-                const SizedBox(height: 20),
-
-                Center(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: royal),
-                    onPressed: shareViaWhatsApp,
-                    icon: const Icon(Icons.share, color: Colors.white),
-                    label: const Text(
-                      "Share via WhatsApp",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // FLOATING BOOKING ID
-        Positioned(
-          top: 10,
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                "Booking ID: ${booking['booking_id'] ?? 'N/A'}",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _priceDetailsSection() {
-    final numDays = pricingData?["num_days"] ?? 1;
-
-    Widget pricingField({
-      required String label,
-      required String value,
-      bool bold = false,
-      bool readOnly = true,
-      TextEditingController? controller,
-    }) {
-      return Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight:FontWeight.bold,
-                color: royal,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 3,
-            child: TextFormField(
-              readOnly: readOnly,
-              controller: controller ?? TextEditingController(text: value),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: royal,
-                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: royal.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: royal, width: 1),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: royal, width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: royal, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Main container
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: royal, width: 1.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-
-              // Pricing details
-              loadingPrice
-                  ? const Center(child: CircularProgressIndicator())
-                  : pricingData == null
-                  ? const Text("Failed to load pricing")
-                  : Column(
-                children: [
-                  Row(
-              children: [
-              const Expanded(
-              flex: 2,
-                child: Text(
-                  "Pricing Type",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              Expanded(
-                flex: 3,
-                child: DropdownButtonFormField<String>(
-                  initialValue: pricingType,
-                  isExpanded: true,
-
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: royal.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: royal, width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: royal, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: royal, width: 2),
-                    ),
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-
-                  // 🔵 Your royal dropdown arrow
-                  icon: Icon(Icons.arrow_drop_down, color: royal, size: 28),
-
-                  dropdownColor: Colors.white,
-
-                  style: const TextStyle(
-                    color: royal,
-                    fontWeight: FontWeight.w500,
-                  ),
-
-                  items: ["NORMAL", "PEAK_HOUR"].map(
-                        (type) {
-                      return DropdownMenuItem(
-                        value: type,
-
-                        // LEFT aligned text
-                        alignment: Alignment.centerLeft,
-
-                        child: Text(
-                          type,
-                          textAlign: TextAlign.left,
-                        ),
-                      );
-                    },
-                  ).toList(),
-
-                  onChanged: (value) {
-                    if (value != null) {
-                      _fetchPricing(newPricingType: value);
-                      _recalculatePricing();
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-                  const SizedBox(height: 10),
-                  pricingField(label: "Room Count", value: "${selectedRoomNumbers.length}"),
-                  const SizedBox(height: 10),
-                  pricingField(label: "Number of Days", value: "$numDays"),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Expanded(
-                          flex: 2,
-                          child: Text(
-                            "Base Amount\n(per room)",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, color: royal),
-                          )),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          initialValue: overriddenBaseAmount?.toStringAsFixed(2) ??
-                              pricingData!["base_amount"].toStringAsFixed(2),
-                          style: TextStyle(color: royal),
-                          cursorColor: royal,
-                          textAlign: TextAlign.right,
-                          keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: royal.withValues(alpha: 0.05),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: royal, width: 1),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: royal, width: 1),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: royal, width: 2),
-                            ),
-                          ),
-                          onChanged: (val) {
-                            final value = double.tryParse(val);
-                            if (value != null) {
-                              overriddenBaseAmount = value;
-                              _recalculatePricing();
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  pricingField(label: "Total Base", value: "₹${pricingData!["total_base"]}"),
-                  const SizedBox(height: 10),
-                  pricingField(
-                   label: "GST (${pricingData!["gst_rate"] ?? 18}%)",
-                   value: "₹${pricingData!["gst"]}",
-                  ),
-                  const SizedBox(height: 10),
-                  pricingField(
-                  label: "Grand Total",
-                  value: "₹${pricingData!["grand_total"]}",
-                  bold: true,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      "Advance Payment",
-                      style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: advanceController,
-                      cursorColor: royal,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(color: royal),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return "Advance amount is required";
-                        if (double.tryParse(val) == null) return "Enter a valid amount";
-                        return null;
-                      },
-
-                      decoration: InputDecoration(
-                        hintText: 'Enter advance amount',
-                        hintStyle: TextStyle(color: royal),
-                        filled: true,
-                        fillColor: royal.withValues(alpha: 0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: royal, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: royal, width: 1)),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: royal, width: 2),
-                        ),
-                      ),
-                      onChanged: (val) {
-                        double entered = double.tryParse(val) ?? 0.0;
-                        double maxAdvance = pricingData?["grand_total"] ?? 0.0;
-
-                        if (entered > maxAdvance) {
-                          entered = maxAdvance;
-                          advanceController.text = entered.toStringAsFixed(2);
-                          advanceController.selection = TextSelection.fromPosition(
-                              TextPosition(offset: advanceController.text.length));
-                        }
-
-                        _recalculatePricing();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      "Deposit",
-                      style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: depositController,
-                      cursorColor: royal,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(color: royal),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        hintText: 'Enter deposit amount',
-                        hintStyle: const TextStyle(color: royal),
-                        filled: true,
-                        fillColor: royal.withValues(alpha: 0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: royal, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: royal, width: 1)),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: royal, width: 2),
-                        ),
-                      ),
-                      onChanged: (val) {
-                        // double entered = double.tryParse(val) ?? 0.0;
-                        // Prevent deposit > grand total
-                        _recalculatePricing();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if ((double.tryParse(depositController.text) ?? 0) > 0)
-                Row(
-                  children: [
-                    const Expanded(
-                      flex: 2,
-                      child: Text(
-                        "Total Amount Paid",
-                        style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 3,
-                      child: TextFormField(
-                        readOnly: true,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(color: royal),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: royal.withValues(alpha: 0.05),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: royal, width: 1),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: royal, width: 1)),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: royal, width: 2),
-                          ),
-                        ),
-                        controller: TextEditingController(
-                          text: ( (double.tryParse(advanceController.text) ?? 0.0)
-                              + (double.tryParse(depositController.text) ?? 0.0) )
-                              .toStringAsFixed(2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      "Balance",
-                      style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      readOnly: true,
-                      style: TextStyle(color: royal),
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: royal.withValues(alpha: 0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: royal, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: royal, width: 1)),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: royal, width: 2),
-                        ),
-                      ),
-                        controller: balanceController,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Floating header
-        Positioned(
-          top: -12,
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                "PRICE DETAILS",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _personalInfoSection() {
-    return Stack(
-      clipBehavior: Clip.none, // allow header to overflow
-      children: [
-        // Main container
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: royal, width: 1.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              _buildRow(
-                "Phone",
-                phoneController,
-                keyboardType: TextInputType.number,
-                maxLength: 13, // +91 + 10 digits
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) return "Phone is required";
-                  // validate +countrycode and 10 digits
-                  if (!RegExp(r'^\+\d{1,4}\d{10}$').hasMatch(val)) {
-                    return "Include country code and exactly 10 digits";
-                  }
-                  return null;
-                },
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d\+]')), // allow digits and +
-                  LengthLimitingTextInputFormatter(13),
-                ],
-                hideCounter: true,
-              ),
-              const SizedBox(height: 10),
-              _buildRow("Name", nameController, validator: (val) {
-                if (val == null || val.trim().isEmpty) return "Name is required";
-                return null;
-              }),
-              const SizedBox(height: 10),
-              _buildRow(
-                "Alternate Phone",
-                altPhoneController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [AlternatePhoneFormatter()],
-                validator: (val) {
-                  if (val != null && val.isNotEmpty) {
-                    final numbers = val.split(',');
-                    for (var n in numbers) {
-                      if (n.length != 10) return "Each phone must be 10 digits";
-                    }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              _buildRow("Address", addressController, validator: (val) {
-                if (val == null || val.trim().isEmpty) return "Address is required";
-                return null;
-              }),
-              const SizedBox(height: 10),
-              _buildRow(
-                "Email",
-                emailController,
-                keyboardType: TextInputType.emailAddress,
-                validator: (val) {
-                  if (val != null && val.isNotEmpty) {
-                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w]{2,4}').hasMatch(val)) {
-                      return "Enter valid email";
-                    }
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-
-        // Floating centered header
-        Positioned(
-          top: -12, // overlap border
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                "PERSONAL INFORMATION",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _bookingInfoSection() {
     return Stack(
       clipBehavior: Clip.none,
@@ -1559,19 +1466,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              // Room type & name centered
-              Center(
-                child: Text(
-                  "${widget.roomType} - ${widget.roomName}",
-                  style: const TextStyle(
-                    color: royal,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
               const SizedBox(height: 20),
-              // Check-In row
               Row(
                 children: [
                   const Expanded(
@@ -1610,7 +1505,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 ],
               ),
               const SizedBox(height: 10),
-              // Check-Out row
               Row(
                 children: [
                   const Expanded(
@@ -1649,10 +1543,9 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 ],
               ),
               const SizedBox(height: 15),
-              // Room type & name centered
               Center(
                 child: Text(
-                  "Room Numbers",
+                  "Selected Room Details",
                   style: const TextStyle(
                     color: royal,
                     fontSize: 20,
@@ -1661,24 +1554,29 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              // Selected Rooms centered
               Center(
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: selectedRoomNumbers
-                      .map((n) => Chip(
-                    label: Text(n, style: const TextStyle(color: Colors.white)),
-                    backgroundColor: royal,
-                  ))
-                      .toList(),
+                child: Column(
+                  children: widget.bookedRooms.map((room) {
+                    final name = room[0];
+                    final type = room[1];
+                    final nums = List<String>.from(room[2]);
+
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: royal),
+                      ),
+                      child: ListTile(
+                        title: Text("$type - $name", style: TextStyle(color: royal, fontWeight: FontWeight.bold)),
+                        subtitle: Text("Rooms: ${nums.join(', ')}", style: TextStyle(color: royal)),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
           ),
         ),
-
-        // Floating centered header
         Positioned(
           top: -12,
           left: 0,
@@ -1702,31 +1600,104 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     );
   }
 
-  void _recalculatePricing() {
-    if (pricingData == null) return;
+  Widget _personalInfoSection() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: royal, width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              _buildRow(
+                "Phone",
+                phoneController,
+                keyboardType: TextInputType.number,
+                maxLength: 13,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) return "Phone is required";
+                  if (!RegExp(r'^\+\d{1,4}\d{10}$').hasMatch(val)) {
+                    return "Include country code and exactly 10 digits";
+                  }
+                  return null;
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d+]')),
+                  LengthLimitingTextInputFormatter(13),
+                ],
+                hideCounter: true,
+              ),
+              const SizedBox(height: 10),
+              _buildRow("Name", nameController, validator: (val) {
+                if (val == null || val.trim().isEmpty) return "Name is required";
+                return null;
+              }),
+              const SizedBox(height: 10),
+              _buildRow(
+                "Alternate Phone",
+                altPhoneController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [AlternatePhoneFormatter()],
+                validator: (val) {
+                  if (val != null && val.isNotEmpty) {
+                    final numbers = val.split(',');
+                    for (var n in numbers) {
+                      if (n.length != 10) return "Each phone must be 10 digits";
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildRow("Address", addressController, validator: (val) {
+                if (val == null || val.trim().isEmpty) return "Address is required";
+                return null;
+              }),
+              const SizedBox(height: 10),
+              _buildRow(
+                "Email",
+                emailController,
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) {
+                  if (val != null && val.isNotEmpty) {
+                    if (!RegExp(r'^[\w-.]+@([\w-]+\.)+\w{2,4}').hasMatch(val)) {
+                      return "Enter valid email";
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
 
-    final roomCount = selectedRoomNumbers.length;
-    final numDays = pricingData!["num_days"] ?? 1;
-    final baseAmount = overriddenBaseAmount ?? pricingData!["base_amount"];
-    final totalBase = baseAmount * roomCount * numDays;
-    final gstRate = pricingData!["gst_rate"] ?? 18;
-    final gstAmount = double.parse((totalBase * gstRate / 100).toStringAsFixed(2));
-    final grandTotal = double.parse((totalBase + gstAmount).toStringAsFixed(2));
-
-    final advance = double.tryParse(advanceController.text) ?? 0.0;
-
-    setState(() {
-      pricingData!["base_amount"] = baseAmount;
-      pricingData!["total_base"] = totalBase;
-      pricingData!["gst"] = gstAmount;
-      pricingData!["grand_total"] = grandTotal;
-
-      balance = grandTotal - advance;
-
-      // 🔥 Very important — update controller here
-      balanceController.text = balance.toStringAsFixed(2);
-    });
+        Positioned(
+          top: -12,
+          left: 0,
+          right: 0,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              decoration: BoxDecoration(
+                color: royal,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                "PERSONAL INFORMATION",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
+
 
   Widget _buildHallCard(Map<String, dynamic> hall) {
     return Container(
@@ -1759,7 +1730,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -1817,14 +1788,13 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
             validator: validator,
             decoration: _inputDecoration(
               label: label,
-              counterText: hideCounter ? '' : null, // hide counter if true
+              counterText: hideCounter ? '' : null,
             ),
           ),
         ),
       ],
     );
   }
-
 
   Future<void> _fetchBookingByPhone(String phone) async {
     if (phone.isEmpty) return;
@@ -1854,10 +1824,16 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     }
   }
 
+  String lowercaseFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toLowerCase() + text.substring(1);
+  }
+
   InputDecoration _inputDecoration({required String label, String? counterText}) {
+    String lowerLabel = lowercaseFirst(label);
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: royal),
+      hintText: "Enter the $lowerLabel",
+      hintStyle: TextStyle(color: royal.withValues(alpha: 0.7)),
       filled: true,
       fillColor: royal.withValues(alpha: 0.05),
       enabledBorder: OutlineInputBorder(
@@ -1879,7 +1855,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      counterText: counterText, // here
+      counterText: counterText,
     );
   }
 
@@ -1895,7 +1871,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-        canPop: false, // prevent default pop
+        canPop: false,
         onPopInvokedWithResult: (didPop, res) {
           if (!didPop) {
             _handleBackNavigation();
@@ -1948,7 +1924,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
               const SizedBox(height: 40),
               _guestsSection(),
               const SizedBox(height: 40),
-              _priceDetailsSection(),
+              _paymentSection(),
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
@@ -1968,6 +1944,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     )
     );
   }
+
   void _handleBackNavigation() {
     if (bookingSuccess) {
       Navigator.pushAndRemoveUntil(

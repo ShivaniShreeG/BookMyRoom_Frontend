@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../public/config.dart';
 import '../../../../public/main_navigation.dart';
-import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'cancel_bill.dart';
 
 const Color royal = Color(0xFF19527A);
@@ -24,7 +22,6 @@ class CancelDetailsPage extends StatefulWidget {
 
 class _CancelDetailsPageState extends State<CancelDetailsPage> {
   Map<String, dynamic>? hallDetails;
-  List<Uint8List?> guestIdBytes = [];
   bool bookingSuccess = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool submitting = false;
@@ -34,26 +31,15 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
   final TextEditingController _cancelChargeController = TextEditingController();
   final TextEditingController _refundController = TextEditingController();
 
-  int numGuests = 1;
-  List<File?> guestIdProofs = [];
-
-  // final ImagePicker _picker = ImagePicker();
   @override
   void initState() {
     super.initState();
     _fetchHallDetails();
     _fetchCancelInfo();
-    // guestIdProofs = List.generate(numGuests, (_) => null);
-    // guestIdBytes = List.generate(numGuests, (_) => null);
     _reasonPercentageController.text = "Nill";
 
   }
 
-  @override
-  void dispose() {
-    // _depositController.dispose();
-    super.dispose();
-  }
 
   Future<void> _fetchCancelInfo() async {
     try {
@@ -102,7 +88,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -134,11 +120,10 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                 "Reason",
                 _reasonPercentageController,
                 onChanged: (val) {},
-                inputFormatters: [], // remove number filtering
+                inputFormatters: [],
               ),
               const SizedBox(height: 10),
 
-              // Cancel %
               _editableRow(
                 "Cancel %",
                 _cancelPercentageController,
@@ -146,14 +131,12 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                 onChanged: (val) {
                   double perc = double.tryParse(val) ?? 0;
 
-                  // Internal clamp for calculations only
                   final charge = (baseAmount * perc / 100).clamp(0, baseAmount);
                   final refund = (baseAmount - charge).clamp(0, baseAmount);
 
                   setState(() {
                     _cancelChargeController.text = charge.toStringAsFixed(2);
                     _refundController.text = refund.toStringAsFixed(2);
-                    // Do NOT overwrite percentController.text
                   });
                 },
                 inputFormatters: [
@@ -162,7 +145,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
               ),
               const SizedBox(height: 10),
 
-              // Cancellation Charge
               _editableRow(
                 "Cancellation Charge",
                 _cancelChargeController,
@@ -175,7 +157,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                   setState(() {
                     _cancelPercentageController.text = perc.toStringAsFixed(2);
                     _refundController.text = refund.toStringAsFixed(2);
-                    // Do NOT overwrite chargeController.text
                   });
                 },
                 inputFormatters: [
@@ -184,7 +165,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
               ),
               const SizedBox(height: 10),
 
-              // Refund Amount
               _editableRow(
                 "Refund Amount",
                 _refundController,
@@ -197,7 +177,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                   setState(() {
                     _cancelChargeController.text = charge.toStringAsFixed(2);
                     _cancelPercentageController.text = perc.toStringAsFixed(2);
-                    // Do NOT overwrite refundController.text
                   });
                 },
                 inputFormatters: [
@@ -208,7 +187,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
           ),
         ),
 
-        // Floating header
         Positioned(
           top: -12,
           left: 0,
@@ -275,7 +253,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: royal.withOpacity(0.05),
+              fillColor: royal.withValues(alpha: 0.05),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             ),
@@ -361,7 +339,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
   }
 
   Widget _personalInfoSection(Map<String, dynamic> b) {
-    bool _hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
+    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -377,35 +355,30 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
             children: [
               const SizedBox(height: 10),
 
-              // Name (always show)
               _infoTextField("Name", b["name"]),
 
-              // Phone (always show)
               const SizedBox(height: 10),
               _infoTextField("Phone", b["phone"]),
 
-              // Alternate Phone (only if exists)
-              if (_hasValue(b["alternate_phone"])) ...[
+              if (hasValue(b["alternate_phone"])) ...[
                 const SizedBox(height: 10),
                 _infoTextField("Alt Phone", b["alternate_phone"]),
               ],
 
-              // Email (only if exists)
-              if (_hasValue(b["email"])) ...[
+              if (hasValue(b["email"])) ...[
                 const SizedBox(height: 10),
                 _infoTextField("Email", b["email"]),
               ],
 
-              // Address (only if exists)
-              if (_hasValue(b["address"])) ...[
+              if (hasValue(b["address"])) ...[
                 const SizedBox(height: 10),
                 _infoTextField("Address", b["address"]),
               ],
               const SizedBox(height: 10),
               Center(
-                child: Text("${b['room_name']} - ${b['room_type']}",
+                child: Text("BOOKING INFORMATION",
                   style: const TextStyle(color: royal,
-                    fontSize: 20, fontWeight: FontWeight.bold,),),
+                    fontSize: 18, fontWeight: FontWeight.bold,),),
               ),
 
               const SizedBox(height: 10),
@@ -459,33 +432,18 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
 
               Center(
                 child: Text(
-                  "ROOM NUMBERS",
-                  style: const TextStyle(
+                  "Booked Room Details",
+                  style: TextStyle(
                     color: royal,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
 
               Center(
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: b['room_number']
-                      .map<Widget>(
-                        (n) => Chip(
-                      label: Text(
-                        "$n",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      backgroundColor: royal,
-                    ),
-                  )
-                      .toList(),
-                ),
+                child: _buildSelectedRooms(b),
               ),
 
               const SizedBox(height: 10),
@@ -508,7 +466,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                   Expanded(
                     flex: 4,
                     child: TextFormField(
-                      initialValue: numGuests.toString(),
+                      initialValue: b['numberofguest'].toString(),
                       readOnly: true,
                       cursorColor: royal,
                       textAlign: TextAlign.right,
@@ -540,7 +498,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
           ),
         ),
 
-        // Floating header
         Positioned(
           top: -12,
           left: 0,
@@ -564,6 +521,47 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
     );
   }
 
+  Widget _buildSelectedRooms(dynamic b) {
+    final bookedRooms = b['booked_room'];
+
+    if (bookedRooms == null || bookedRooms is! List || bookedRooms.isEmpty) {
+      return Text(
+        "No room details available",
+        style: TextStyle(color: royal, fontSize: 14, fontStyle: FontStyle.italic),
+      );
+    }
+
+    return Column(
+      children: bookedRooms.map<Widget>((room) {
+        final name = room[0]?.toString() ?? "-";
+        final type = room[1]?.toString() ?? "-";
+
+        final nums = (room[2] is List)
+            ? List<String>.from(room[2]).join(", ")
+            : "-";
+
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: royal),
+          ),
+          child: ListTile(
+            leading: Icon(Icons.meeting_room, color: royal),
+            title: Text("$name • $type",
+                style: TextStyle(
+                    color: royal,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+            subtitle: Text(
+              "Rooms: $nums",
+              style: TextStyle(color: royal),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _paymentRow(String label, String value) {
     return Row(
       children: [
@@ -583,7 +581,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
           child: TextFormField(
             readOnly: true,
             initialValue: value,
-            textAlign: TextAlign.right, // Right-align the value
+            textAlign: TextAlign.right,
             style: const TextStyle(color: royal),
             decoration: _inputDecoration(),
           ),
@@ -628,330 +626,12 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       filled: true,
-      fillColor: royal.withOpacity(0.05),
+      fillColor: royal.withValues(alpha: 0.05),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
     );
   }
-
-  Widget bookingDetailsCard({
-    required Map<String, dynamic> booking,
-    required Color royal,
-  }) {
-
-    String formatTo12Hour(DateTime dt) {
-      return "${dt.day.toString().padLeft(2, '0')}-"
-          "${dt.month.toString().padLeft(2, '0')}-"
-          "${dt.year} "
-          "${(dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0')}:"
-          "${dt.minute.toString().padLeft(2, '0')} "
-          "${dt.hour >= 12 ? "PM" : "AM"}";
-    }
-
-    String formatDateTime(String? dateTimeStr) {
-      if (dateTimeStr == null) return 'N/A';
-      try {
-        final dt = DateTime.parse(dateTimeStr);
-        return formatTo12Hour(dt);
-      } catch (e) {
-        return 'Invalid date';
-      }
-    }
-
-    final roomNumbers = booking['room_number'] as List<dynamic>?;
-    final idProofs = booking['id_proof'] as List<dynamic>?;
-
-    // Parse alternate phone
-    List<String> alternatePhones = [];
-    if (booking['alternate_phone'] != null &&
-        booking['alternate_phone'].toString().isNotEmpty) {
-      try {
-        final alt = jsonDecode(booking['alternate_phone'].toString());
-        if (alt is List) alternatePhones = alt.map((e) => e.toString()).toList();
-      } catch (_) {
-        alternatePhones =
-            booking['alternate_phone'].toString().split(',').map((e) => e.trim()).toList();
-      }
-    }
-
-    // ---------------- ALIGNED TEXT FOR WHATSAPP ----------------
-    String generateShareText() {
-      String s(dynamic v) => v?.toString() ?? "N/A";
-
-      String formatLine(String label, dynamic value) {
-        return "${label.padRight(13)} : ${s(value)}";
-      }
-
-      final buffer = StringBuffer();
-
-      buffer.writeln("```"); // Start monospace block
-
-      // BOOKING CONFIRMATION HEADER
-      buffer.writeln("   Booking Confirmation");
-      buffer.writeln("---------------------------");
-
-      // HALL / LODGE NAME
-      // buffer.writeln("${hallDetails?['name'] ?? 'Lodge / Hotel'}");
-      buffer.writeln("This is your official booking confirmation message from ${hallDetails?['name']}.");
-      buffer.writeln("");
-
-      // Booking ID
-      buffer.writeln(formatLine("Booking ID", booking['booking_id']));
-      buffer.writeln("⚠️ Keep your Booking ID for future reference.");
-      buffer.writeln("");
-      buffer.writeln("        Booking Details");
-      buffer.writeln(formatLine("Name", booking['name']));
-      buffer.writeln(formatLine("Phone", booking['phone']));
-
-      // if (alternatePhones.isNotEmpty)
-      //   buffer.writeln(formatLine("Alt Phone", alternatePhones.join(', ')));
-      //
-      // if (booking['email'] != null)
-      //   buffer.writeln(formatLine("Email", booking['email']));
-      //
-      // if (booking['address'] != null)
-      //   buffer.writeln(formatLine("Address", booking['address']));
-
-      buffer.writeln("");
-
-      // BOOKING INFO
-      // buffer.writeln("         *Booking Info*");
-      buffer.writeln(formatLine("Check-in", formatDateTime(booking['check_in'])));
-      buffer.writeln(formatLine("Check-out", formatDateTime(booking['check_out'])));
-
-      // Room + Type in one line
-      if (booking['room_name'] != null || booking['room_type'] != null) {
-        String roomInfo =
-        "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim();
-        buffer.writeln(formatLine("Room Type", roomInfo));
-      }
-
-      if (roomNumbers != null && roomNumbers.isNotEmpty)
-        buffer.writeln(formatLine("Room Number", roomNumbers.join(', ')));
-
-      // if (booking['numberofguest'] != null)
-      //   buffer.writeln(formatLine("Guests", booking['numberofguest']));
-      //
-      // if (idProofs != null && idProofs.isNotEmpty)
-      //   buffer.writeln(formatLine("ID Proofs", idProofs.join(', ')));
-      // PAYMENT DETAILS FIRST (as you requested)
-      buffer.writeln("       Payment Details");
-
-      if (booking['baseamount'] != null)
-        buffer.writeln(formatLine("Base Amount", booking['baseamount']));
-
-      if (booking['gst'] != null)
-        buffer.writeln(formatLine("GST", booking['gst']));
-
-      if (booking['amount'] != null)
-        buffer.writeln(formatLine("Total Amount", booking['amount']));
-
-      if (booking['advance'] != null)
-        buffer.writeln(formatLine("Advance", booking['advance']));
-
-      if (booking['deposite'] != null)
-        buffer.writeln(formatLine("Deposite", booking['deposite']));
-
-      // TOTAL PAID = ADVANCE + DEPOSITE
-      double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
-      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
-      double totalPaid = adv + dep;
-
-      if (dep > 0)
-        buffer.writeln(formatLine("Total Paid", totalPaid));
-
-      if (booking['Balance'] != null)
-        buffer.writeln(formatLine("Balance", booking['Balance']));
-
-      buffer.writeln("");
-
-      buffer.writeln("----------------------------------");
-      buffer.writeln("Thank you for choosing us! 😊");
-      buffer.writeln("```"); // End monospace block
-
-      return buffer.toString();
-    }
-
-    Future<void> shareViaWhatsApp() async {
-      if (booking['phone'] == null || booking['phone'].toString().isEmpty) return;
-
-      final text = Uri.encodeComponent(generateShareText());
-      final phoneNumber = booking['phone'].toString().replaceAll(' ', '');
-      final url = 'https://wa.me/$phoneNumber?text=$text';
-
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        debugPrint("Cannot launch WhatsApp");
-      }
-    }
-
-    // -------------------- RETURN UI --------------------
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border.all(color: royal, width: 2),
-              borderRadius: BorderRadius.circular(16),
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: royal.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-
-                // PERSONAL INFO
-                if (booking['name'] != null || booking['phone'] != null)
-                  Column(
-                    children: [
-                      if (booking['name'] != null)
-                        buildLabelValue("Name", booking['name'],royal),
-                      if (booking['phone'] != null)
-                        buildLabelValue("Phone", booking['phone'],royal),
-                      if (booking['address'] != null)
-                        buildLabelValue("Address", booking['address'],royal),
-                      if (alternatePhones.isNotEmpty)
-                        buildLabelValue("Alt Phone", alternatePhones.join(', '),royal),
-                      if (booking['email'] != null)
-                        buildLabelValue("Email", booking['email'],royal),
-                    ],
-                  ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // BOOKING INFO
-                Column(
-                  children: [
-                    if (booking['check_in'] != null)
-                      buildLabelValue("Check-in", formatDateTime(booking['check_in']),royal),
-                    if (booking['check_out'] != null)
-                      buildLabelValue("Check-out", formatDateTime(booking['check_out']),royal),
-                    if (booking['room_name'] != null || booking['room_type'] != null)
-                      buildLabelValue(
-                          "Room",
-                          "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim(),royal
-                      ),
-                    if (roomNumbers != null && roomNumbers.isNotEmpty)
-                      buildLabelValue("Room Number", roomNumbers.join(', '),royal),
-                    if (booking['numberofguest'] != null)
-                      buildLabelValue("Guests", booking['numberofguest'].toString(),royal),
-                    if (idProofs != null && idProofs.isNotEmpty)
-                      buildLabelValue("ID Proofs", idProofs.join(', '),royal),
-                  ],
-                ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // PAYMENT INFO
-                Column(
-                  children: [
-                    if (booking['baseamount'] != null)
-                      buildLabelValue("Base Amount", booking['baseamount'].toString(),royal),
-                    if (booking['gst'] != null)
-                      buildLabelValue("GST", booking['gst'].toString(),royal),
-                    if (booking['amount'] != null)
-                      buildLabelValue("Total Amount", booking['amount'].toString(),royal),
-                    if (booking['advance'] != null)
-                      buildLabelValue("Advance", booking['advance'].toString(),royal),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Deposite", booking['deposite'].toString(),royal),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Total Paid",  (
-                          (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
-                              (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
-                      ).toString() ,royal),
-                    if (booking['Balance'] != null)
-                      buildLabelValue("Balance", booking['Balance'].toString(),royal),
-                  ],
-                ),
-
-
-                const SizedBox(height: 20),
-
-                Center(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: royal),
-                    onPressed: shareViaWhatsApp,
-                    icon: const Icon(Icons.share, color: Colors.white),
-                    label: const Text(
-                      "Share via WhatsApp",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // FLOATING BOOKING ID
-        Positioned(
-          top: 10,
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                "Booking ID: ${booking['booking_id'] ?? 'N/A'}",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildLabelValue(String label, String value, Color royal) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(94),
-          1: FixedColumnWidth(5),
-          2: FlexColumnWidth(),
-        },
-        children: [
-          TableRow(
-            children: [
-              Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: royal)),
-              Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: royal)),
-              Text(value, style: TextStyle(fontSize: 15, color: royal)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
+  
   Future<void> _bookRooms() async {
     if (!_formKey.currentState!.validate()) {
       _showMessage("Please fill all required fields");
@@ -1083,7 +763,8 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                                         MaterialPageRoute(
                                           builder: (context) => CancelBillPage(
                                             bookingDetails: widget.booking,
-                                            serverData: bookingResponse, // ⬅ NEW
+                                            serverData: bookingResponse,
+                                            hallDetails:hallDetails,
                                           ),
                                         ),
                                       );
@@ -1101,7 +782,6 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
                             ),
                           ),
 
-                          // Floating header
                           Positioned(
                             top: -20,
                             left: 0,

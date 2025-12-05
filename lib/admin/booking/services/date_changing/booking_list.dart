@@ -4,21 +4,21 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../public/config.dart';
 import '../../../../public/main_navigation.dart';
-import 'billing_details.dart';
+import 'date_chaging.dart';
 import 'package:intl/intl.dart';
 
 const Color royalblue = Color(0xFF376EA1);
 const Color royal = Color(0xFF19527A);
 const Color royalLight = Color(0xFF629AC1);
 
-class BookingsListPage extends StatefulWidget {
-  const BookingsListPage({super.key});
+class DateChangingPage extends StatefulWidget {
+  const DateChangingPage({super.key});
 
   @override
-  State<BookingsListPage> createState() => _BookingsListPageState();
+  State<DateChangingPage> createState() => _DateChangingPageState();
 }
 
-class _BookingsListPageState extends State<BookingsListPage> {
+class _DateChangingPageState extends State<DateChangingPage> {
   bool _isFetching = true;
   List<Map<String, dynamic>> _bookings = [];
   List<Map<String, dynamic>> _filteredBookings = [];
@@ -40,7 +40,7 @@ class _BookingsListPageState extends State<BookingsListPage> {
     if (lodgeId == null) return;
 
     try {
-      final url = Uri.parse("$baseUrl/billings/booked/$lodgeId");
+      final url = Uri.parse("$baseUrl/history/prebooked/$lodgeId");
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -48,17 +48,14 @@ class _BookingsListPageState extends State<BookingsListPage> {
 
         List bookings = [];
 
-        /// CASE 1 → Backend returns a LIST directly
         if (data is List) {
           bookings = data;
         }
 
-        /// CASE 2 → Backend returns { success: true, data: [] }
         else if (data is Map && data["data"] is List) {
           bookings = data["data"];
         }
 
-        /// CASE 3 → Backend uses another key (example: "details")
         else if (data is Map && data["details"] is List) {
           bookings = data["details"];
         }
@@ -207,7 +204,7 @@ class _BookingsListPageState extends State<BookingsListPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => BillingDetailsPage(booking: b),
+            builder: (_) => BookingDetailsPage(booking: b),
           ),
         );
       },
@@ -336,7 +333,7 @@ class _BookingsListPageState extends State<BookingsListPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: royal,
-        title: const Text("Booking List", style: TextStyle(color: Colors.white)),
+        title: const Text("Pre-Booking List", style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -363,9 +360,8 @@ class _BookingsListPageState extends State<BookingsListPage> {
             const SizedBox(height: 16),
             TextField(
               controller: _searchController,
-              cursorColor: royal,
               style: TextStyle(color: royal),
-              keyboardType: TextInputType.number,
+              cursorColor: royal,
               decoration: InputDecoration(
                 hintText: "Search by name, phone, room, booking id...",
                 hintStyle: TextStyle(color: royal),
@@ -391,7 +387,7 @@ class _BookingsListPageState extends State<BookingsListPage> {
               child: _filteredBookings.isEmpty
                   ? Center(
                 child: Text(
-                  "No bookings found",
+                  "No pre-bookings found",
                   style: TextStyle(color: royal, fontSize: 16),
                 ),
               )

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'home_page/manage_hall.dart';
 import 'home_page/dashboard_page.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class HomePageWithSelectedHall extends StatefulWidget {
   final dynamic selectedHall;
   const HomePageWithSelectedHall({super.key, this.selectedHall});
@@ -34,15 +38,14 @@ class _HomePageWithSelectedHallState extends State<HomePageWithSelectedHall> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3EAD6), // light cream background
+      backgroundColor: Colors.white,
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: const Color(0xFF5B6547), // Olive green navbar
-        selectedItemColor: const Color(0xFFD8C9A9), // Muted tan selected
-        unselectedItemColor:
-        const Color(0xFFD8C9A9).withValues(alpha:0.7), // lighter tan unselected
+        backgroundColor: royal,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white.withValues(alpha:0.7),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),

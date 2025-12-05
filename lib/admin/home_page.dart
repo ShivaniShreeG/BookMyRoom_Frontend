@@ -45,8 +45,8 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.white,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: royal,width: 2)
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
         ),
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -143,33 +143,33 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: royalLight.withValues(alpha: 0.2),
         body: Container(
             child:_isLoading
-          ? const Center(
-        child: CircularProgressIndicator(color: royal),
-      )
-          : SingleChildScrollView(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            if (selectedHall != null)
-              Align(
-                alignment: Alignment.center,
-                child: _buildHallCard(selectedHall!, textScale, boxScale),
+                ? const Center(
+              child: CircularProgressIndicator(color: royal),
+            )
+                : SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    if (selectedHall != null)
+                      Align(
+                        alignment: Alignment.center,
+                        child: _buildHallCard(selectedHall!, textScale, boxScale),
+                      ),
+                    if (roomStats.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: 20 * textScale),
+                        child: _buildRoomAvailabilityBox(roomStats, textScale, boxScale),
+                      ),
+                    Padding(
+                      padding: EdgeInsets.only(top: 20 * textScale),
+                      child: _buildCurrentBalanceBox(currentBalance, textScale, boxScale),
+                    ),
+                  ],
+                ),
               ),
-            if (roomStats.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.only(top: 20 * textScale),
-                child: _buildRoomAvailabilityBox(roomStats, textScale, boxScale),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 20 * textScale),
-                child: _buildCurrentBalanceBox(currentBalance, textScale, boxScale),
-              ),
-          ],
-        ),
-      ),
-    )
-    )
+            )
+        )
     );
   }
 
@@ -402,7 +402,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 SizedBox(width: 8 * boxScale),
                 Text(
-                  "Current Balance",
+                  "Cash On Hand",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 17 * textScale,

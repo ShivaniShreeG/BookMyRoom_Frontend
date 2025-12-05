@@ -3,6 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../public/config.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class BlockHallPage extends StatefulWidget {
   final dynamic hall;
   const BlockHallPage({super.key, required this.hall});
@@ -15,8 +19,32 @@ class _BlockHallPageState extends State<BlockHallPage> {
   final _reasonController = TextEditingController();
   bool _isBlocking = false;
   List<String> _blockReasons = [];
-  bool? _isActive; // nullable until loaded
+  bool? _isActive;
   bool _isLoading = true;
+
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -27,7 +55,7 @@ class _BlockHallPageState extends State<BlockHallPage> {
   Future<void> _fetchHallDetails() async {
     setState(() => _isLoading = true);
     try {
-      final url = Uri.parse('$baseUrl/halls/${widget.hall['hall_id']}');
+      final url = Uri.parse('$baseUrl/lodges/${widget.hall['lodge_id']}');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -37,20 +65,10 @@ class _BlockHallPageState extends State<BlockHallPage> {
           _blockReasons = List<String>.from(data['block_reasons'] ?? []);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load hall details'),
-            backgroundColor: Color(0xFF5B6547),
-          ),
-        );
+        _showMessage('Failed to load hall details');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: const Color(0xFF5B6547),
-        ),
-      );
+      _showMessage('Error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -59,19 +77,14 @@ class _BlockHallPageState extends State<BlockHallPage> {
   Future<void> _blockUnblockHall(bool block) async {
     final reason = _reasonController.text.trim();
     if (block && reason.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide a reason to block the hall'),
-          backgroundColor: Color(0xFF5B6547),
-        ),
-      );
+      _showMessage('Please provide a reason to block the hall');
       return;
     }
 
     setState(() => _isBlocking = true);
 
     try {
-      final url = Uri.parse('$baseUrl/halls/${widget.hall['hall_id']}/block');
+      final url = Uri.parse('$baseUrl/lodges/${widget.hall['lodge_id']}/block');
       final response = await http.patch(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -80,12 +93,7 @@ class _BlockHallPageState extends State<BlockHallPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message']),
-            backgroundColor: const Color(0xFF5B6547),
-          ),
-        );
+        _showMessage(data['message']);
         _reasonController.clear();
 
         setState(() {
@@ -93,20 +101,10 @@ class _BlockHallPageState extends State<BlockHallPage> {
           _blockReasons = block ? [reason] : [];
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${response.body}'),
-            backgroundColor: const Color(0xFF5B6547),
-          ),
-        );
+        _showMessage('Error: ${response.body}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: const Color(0xFF5B6547),
-        ),
-      );
+      _showMessage('Error: $e');
     } finally {
       setState(() => _isBlocking = false);
     }
@@ -115,43 +113,42 @@ class _BlockHallPageState extends State<BlockHallPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFECE5D8),
+      backgroundColor: Colors.white,
         appBar: _isLoading
     ? AppBar(
-    backgroundColor: const Color(0xFF5B6547),
-    title: const Text(
-    'Loading...',
-    style: TextStyle(color: Color(0xFFD8C9A9)),
-    ),
-    iconTheme: const IconThemeData(color: Color(0xFFD8C9A9)),
-    shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(
-    bottom: Radius.circular(20), // Rounded bottom
-    ),
-    ),
-    )
+          backgroundColor: royal,
+          title: const Text(
+            'Loading...', style: TextStyle(color: Colors.white),
+          ),
+          iconTheme: const IconThemeData(color:Colors.white),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+          ),
+        )
         : AppBar(
-    backgroundColor: const Color(0xFF5B6547),
-    elevation: 6,
-    title: Text(
-    "${_isActive == true ? 'Block' : 'Unblock'} - ${widget.hall['name'] ?? 'Hall'}",
-    style: const TextStyle(
-    color: Color(0xFFD8C9A9),
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    centerTitle: true,
-    iconTheme: const IconThemeData(color: Color(0xFFD8C9A9)),
-    shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(
-    bottom: Radius.circular(20), // Rounded bottom
-    ),
-    ),
-    ),
+          backgroundColor: royal,
+          elevation: 6,
+          title: Text(
+            "${_isActive == true ? 'Block' : 'Unblock'} - ${widget.hall['name'] ?? 'Lodge'}",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: Colors.white),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+          ),
+        ),
 
     body: _isLoading
           ? const Center(
-        child: CircularProgressIndicator(color: Color(0xFFD8C9A9)),
+        child: CircularProgressIndicator(color: Colors.white),
       )
           : Center(
         child: Padding(
@@ -160,28 +157,27 @@ class _BlockHallPageState extends State<BlockHallPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Header
               Text(
                 _isActive == true
-                    ? 'Reason for blocking the hall:'
+                    ? 'Reason for blocking the lodge:'
                     : 'Block Reason(s):',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFF5B6547),
+                  color: royal,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
               ),
               const SizedBox(height: 12),
 
-              // Card
               SizedBox(
                 width: 350,
                 child: Card(
-                  color: const Color(0xFFD8C9A9),
-                  elevation: 4,
+                  color: Colors.white,
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: royal,width: 1)
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -189,17 +185,18 @@ class _BlockHallPageState extends State<BlockHallPage> {
                         ? TextField(
                       controller: _reasonController,
                       maxLines: 3,
+                      cursorColor: royal,
                       decoration: const InputDecoration(
                         hintText: 'Enter reason...',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(color: Color(0xFF5B6547)),
+                        hintStyle: TextStyle(color: royal),
                       ),
-                      style: const TextStyle(color: Color(0xFF5B6547)),
+                      style: const TextStyle(color: royal),
                     )
                         : _blockReasons.isEmpty
                         ? const Text(
                       'No reason provided',
-                      style: TextStyle(color: Color(0xFF5B6547)),
+                      style: TextStyle(color: royal),
                       textAlign: TextAlign.center,
                     )
                         : Column(
@@ -210,7 +207,7 @@ class _BlockHallPageState extends State<BlockHallPage> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Text(
                             "• $r",
-                            style: const TextStyle(color: Color(0xFF5B6547)),
+                            style: const TextStyle(color: royal),
                           ),
                         ),
                       )
@@ -221,27 +218,26 @@ class _BlockHallPageState extends State<BlockHallPage> {
               ),
               const SizedBox(height: 30),
 
-              // Button
               SizedBox(
                 width: 200,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _isBlocking ? null : () => _blockUnblockHall(_isActive!),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5B6547),
+                    backgroundColor: royal,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 4,
                   ),
                   child: _isBlocking
-                      ? const CircularProgressIndicator(color: Color(0xFFD8C9A9))
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
-                    _isActive == true ? 'Block Hall' : 'Unblock Hall',
+                    _isActive == true ? 'Block Lodge' : 'Unblock Lodge',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFD8C9A9),
+                      color: Colors.white,
                     ),
                   ),
                 ),

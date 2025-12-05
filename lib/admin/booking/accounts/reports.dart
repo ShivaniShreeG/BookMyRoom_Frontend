@@ -22,15 +22,16 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
 
   DateTime _selectedMonth = DateTime.now();
-  int? selectedYear = DateTime.now().year; // ✅ default to current year
+  int? selectedYear = DateTime.now().year;
   Map<String, dynamic>? hallDetails;
+  bool _isFetching = true;
+
   @override
   void initState() {
     super.initState();
     _fetchHallDetails();
   }
-  
-  // 🌟 Modern Month-Year Picker
+
   Future<void> _pickMonthYear() async {
     int selectedYear = _selectedMonth.year;
     int selectedMonth = _selectedMonth.month;
@@ -59,13 +60,9 @@ class _ReportsPageState extends State<ReportsPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // 🔹 Dropdown Fields
                 LayoutBuilder(
                   builder: (context, constraints) {
                     bool isNarrow = constraints.maxWidth < 360;
-
-                    // Common dropdown styling
                     InputDecoration dropdownDecoration(String label) => InputDecoration(
                       labelText: label,
                       labelStyle: TextStyle(
@@ -160,8 +157,6 @@ class _ReportsPageState extends State<ReportsPage> {
                 ),
 
                 const SizedBox(height: 25),
-
-                // 🔹 Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -210,7 +205,6 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  // 🌟 Year Picker
   Future<void> _pickYear() async {
     int selected = selectedYear ?? DateTime.now().year;
 
@@ -226,7 +220,6 @@ class _ReportsPageState extends State<ReportsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 🔹 Title
                 Text(
                   'Select Year',
                   style: TextStyle(
@@ -237,12 +230,11 @@ class _ReportsPageState extends State<ReportsPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // 🔹 Styled Year Dropdown
                 DropdownButtonFormField<int>(
                   initialValue: selected,
-                  dropdownColor: Colors.white, // dropdown background
+                  dropdownColor: Colors.white,
                   style: TextStyle(
-                    color: royal, // dropdown text color
+                    color: royal,
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
@@ -281,7 +273,6 @@ class _ReportsPageState extends State<ReportsPage> {
 
                 const SizedBox(height: 25),
 
-                // 🔹 Action Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -364,7 +355,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -393,6 +384,9 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Future<void> _fetchHallDetails() async {
+    setState(() {
+      _isFetching = true;
+    });
     try {
       final prefs = await SharedPreferences.getInstance();
       final lodgeId = prefs.getInt("lodgeId");
@@ -404,9 +398,11 @@ class _ReportsPageState extends State<ReportsPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
-      setState(() {});
+      setState(() {
+        _isFetching = false;
+      });
     }
   }
 
@@ -424,7 +420,6 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  // 🌟 Section Header Builder
   Widget _sectionContainer(String title, List<Widget> children) {
     return Container(
       width: double.infinity,
@@ -461,8 +456,6 @@ class _ReportsPageState extends State<ReportsPage> {
       ),
     );
   }
-
-  // 🌟 Build UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -484,24 +477,23 @@ class _ReportsPageState extends State<ReportsPage> {
         ],
       ),
 
-      body: Padding(
+      body: _isFetching
+          ? Center(child: CircularProgressIndicator(color: royal))
+          : Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Add this line at the top
             if (hallDetails != null)
               _buildHallCard(hallDetails!),
             const SizedBox(height: 20),
 
-            // Keep your current Center content
             Expanded(
               child: Center(
                 child: SingleChildScrollView(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, // fit content
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // MONTHLY REPORT
                       _sectionContainer("MONTHLY REPORT", [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -545,7 +537,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                     builder: (_) => MonthlyReportPage(
                                       month: _selectedMonth.month,
                                       year: _selectedMonth.year,
-                                      hallDetails: hallDetails!, // ✅ pass hall details
+                                      hallDetails: hallDetails!,
                                     ),
                                   ),
                                 );
@@ -565,7 +557,6 @@ class _ReportsPageState extends State<ReportsPage> {
                       ]),
 
                       const SizedBox(height: 20),
-                      // YEARLY REPORT (same as before)
                       _sectionContainer("YEARLY REPORT", [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -608,7 +599,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                   MaterialPageRoute(
                                     builder: (_) => YearlyReportPage(
                                       year: selectedYear!,
-                                      hallDetails: hallDetails!, // ✅ pass hall details
+                                      hallDetails: hallDetails!,
                                     ),
                                   ),
                                 );

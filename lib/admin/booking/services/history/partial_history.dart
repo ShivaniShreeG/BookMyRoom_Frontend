@@ -3,13 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../public/config.dart';
 import '../../../../public/main_navigation.dart';
-import 'dart:io';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 
 const Color royal = Color(0xFF19527A);
 const Color royalLight = Color(0xFF629AC1);
@@ -25,35 +21,15 @@ class PartialCancelDetailsPage extends StatefulWidget {
 
 class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
   Map<String, dynamic>? hallDetails;
-  final TextEditingController _depositController = TextEditingController(text: "0");
-  List<Uint8List?> guestIdBytes = [];
-  bool bookingSuccess = false;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool submitting = false;
   Map<String, dynamic>? bookingResponse;
+  bool bookingSuccess = false;
 
-  int numGuests = 1;
-  List<File?> guestIdProofs = [];
-
-  final ImagePicker _picker = ImagePicker();
   @override
   void initState() {
     super.initState();
     _fetchHallDetails();
-    numGuests = widget.booking.containsKey('numberofguest')
-        ? (widget.booking['numberofguest'] as int)
-        : 1;
-    guestIdProofs = List.generate(numGuests, (_) => null);
-    guestIdBytes = List.generate(numGuests, (_) => null);
-
   }
-
-  @override
-  void dispose() {
-    _depositController.dispose();
-    super.dispose();
-  }
-
+  
   Future<void> _fetchHallDetails() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -66,7 +42,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -147,6 +123,124 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
         "${dt.hour >= 12 ? "PM" : "AM"}";
   }
 
+  void _showAadharNumbers(List<dynamic> numbersList) {
+    final numbers = numbersList.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+    if (numbers.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          constraints: const BoxConstraints(maxHeight: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Guest Aadhar Numbers",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: royal),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: numbers.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: royal,
+                        child: Text("${index + 1}", style: const TextStyle(color: Colors.white)),
+                      ),
+                      title: Text(numbers[index], style: const TextStyle(fontWeight: FontWeight.bold,color: royal)),
+                    );
+                  },
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Close", style: TextStyle(color: royal)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showGuestIdProofs(List<dynamic> urls) {
+    final validUrls = urls.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+
+    if (validUrls.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          height: 400,
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              const Text(
+                "Guest ID Proofs",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18,color: royal),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: validUrls.length,
+                  itemBuilder: (context, index) {
+                    final url = validUrls[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Image.network(url, fit: BoxFit.contain),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _downloadImage(url),
+                            icon: const Icon(Icons.download),
+                            label: const Text("Download"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: royal,
+                              foregroundColor: Colors.white,
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child:  Text("Close",style: TextStyle(color: royal),),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _downloadImage(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      _showMessage("Cannot open URL");
+    }
+  }
+
   Widget _bookingInfoSection(Map<String, dynamic> b) {
     return Stack(
       clipBehavior: Clip.none,
@@ -161,20 +255,6 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-
-              // Room type & name centered
-              Center(
-                child: Text(
-                  "${b['room_name']} - ${b['room_type']}",
-                  style: const TextStyle(
-                    color: royal,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
               Row(
                 children: [
                   const Expanded(
@@ -188,7 +268,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
                   Expanded(
                     flex: 4,
                     child: TextFormField(
-                      initialValue: numGuests.toString(),
+                      initialValue: b['booking']['numberofguest'].toString(),
                       keyboardType: TextInputType.number,
                       cursorColor: royal,
                       readOnly: true,
@@ -211,30 +291,12 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
                         contentPadding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       ),
-                      onChanged: (val) {
-                        int newCount = int.tryParse(val) ?? 1;
-                        if (newCount < 1) newCount = 1;
-
-                        setState(() {
-                          numGuests = newCount;
-
-                          // --- If guest list is longer than new number, trim it ---
-                          if (guestIdProofs.length > newCount) {
-                            guestIdProofs = guestIdProofs.sublist(0, newCount);
-                            guestIdBytes = guestIdBytes.sublist(0, newCount);
-                          }
-
-                          // (If the user increases guest count, do nothing —
-                          // they must use + button to add new entries.)
-                        });
-                      },
                     ),
                   ),
                 ],
               ),
 
               const SizedBox(height: 10),
-              // Check-In row
               Row(
                 children: [
                   const Expanded(
@@ -250,7 +312,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
                     child: TextFormField(
                       style: TextStyle(color: royal),
                       readOnly: true,
-                      initialValue: formatTo12Hour(DateTime.parse(b['check_in'])),
+                      initialValue: formatTo12Hour(DateTime.parse(b['booking']['check_in'])),
                       decoration: _inputDecoration(),
                     ),
                   ),
@@ -258,8 +320,6 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
               ),
 
               const SizedBox(height: 10),
-
-              // Check-Out row
               Row(
                 children: [
                   const Expanded(
@@ -275,7 +335,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
                     child: TextFormField(
                       style: TextStyle(color: royal),
                       readOnly: true,
-                      initialValue: formatTo12Hour(DateTime.parse(b['check_out'])),
+                      initialValue: formatTo12Hour(DateTime.parse(b['booking']['check_out'])),
                       decoration: _inputDecoration(),
                     ),
                   ),
@@ -286,40 +346,51 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
 
               Center(
                 child: Text(
-                  "ROOM NUMBERS",
-                  style: const TextStyle(
+                  "Booked Room Details",
+                  style: TextStyle(
                     color: royal,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
 
-              // Room Number Chips
               Center(
-                child: Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: b['room_number']
-                      .map<Widget>(
-                        (n) => Chip(
-                      label: Text(
-                        "$n",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      backgroundColor: royal,
-                    ),
-                  )
-                      .toList(),
-                ),
+                child: _buildSelectedRooms(b),
               ),
+              if (b['booking']['aadhar_number'] != null && (b['booking']['aadhar_number'] as List).isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAadharNumbers(b['booking']['aadhar_number']),
+                    icon: const Icon(Icons.account_box),
+                    label: const Text("View Aadhar Numbers"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: royal,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+
+              if (b['booking']['id_proof'] != null && (b['booking']['id_proof'] as List).isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showGuestIdProofs(b['booking']['id_proof']),
+                    icon: const Icon(Icons.image),
+                    label: const Text("View Guest ID Proofs"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: royal,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-
-        // Floating centered header
         Positioned(
           top: -12,
           left: 0,
@@ -343,7 +414,94 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
     );
   }
 
-  Widget _partialCancelSection(List<dynamic> data) {
+  Widget _buildSelectedRooms(dynamic b) {
+    final bookedRooms = b["booking"]['booked_room'];
+
+    if (bookedRooms == null || bookedRooms is! List || bookedRooms.isEmpty) {
+      return Text(
+        "No room details available",
+        style: TextStyle(color: royal, fontSize: 14, fontStyle: FontStyle.italic),
+      );
+    }
+
+    return Column(
+      children: bookedRooms.map<Widget>((room) {
+        final name = room[0]?.toString() ?? "-";
+        final type = room[1]?.toString() ?? "-";
+
+        final nums = (room[2] is List)
+            ? List<String>.from(room[2]).join(", ")
+            : "-";
+
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: royal),
+          ),
+          child: ListTile(
+            leading: Icon(Icons.meeting_room, color: royal),
+            title: Text("$name • $type",
+                style: TextStyle(
+                    color: royal,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+            subtitle: Text(
+              "Rooms: $nums",
+              style: TextStyle(color: royal),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget cancelledRoomsCard(List<dynamic> items) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: royal, width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Center(
+            child: Text(
+              "Cancelled Rooms",
+              style: TextStyle(
+                color: royal,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          ...items.map((r) {
+            final name = r['room_name'] ?? '';
+            final type = r['room_type'] ?? '';
+            final nums = (r['cancelled_numbers'] ?? []).join(', ');
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                "$name ($type): $nums",
+                style: const TextStyle(
+                  color: royal,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          })
+        ],
+      ),
+    );
+  }
+
+  Widget _partialCancelSection(Map<String, dynamic> b) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -358,29 +516,25 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
             children: [
               const SizedBox(height: 10),
 
-              ...data.map((cancel) {
-                return Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _paymentRow("Cancelled Rooms",
-                        "${cancel['room_number']?.join(', ') ?? '-'}"),
-
-                    const SizedBox(height: 5),
+                    cancelledRoomsCard(b["room_number"] ?? []),
+                    const SizedBox(height: 10),
                     _paymentRow("Amount Paid",
-                        "₹${cancel['amount_paid'] ?? 0}"),
+                        "₹${b['amount_paid'] ?? 0}"),
 
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 10),
                     _paymentRow("Cancel Charge",
-                        "₹${cancel['cancel_charge'] ?? 0}"),
+                        "₹${b['cancel_charge'] ?? 0}"),
 
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 10),
                     _paymentRow("Refund Amount",
-                        "₹${cancel['refund'] ?? 0}"),
-
-                    const Divider(thickness: 1),
+                        "₹${b['refund'] ?? 0}"),
+                    const SizedBox(height: 10),
+                    _paymentRow("Cancelled At", formatDate(b['created_at']))
                   ],
-                );
-              }).toList()
+                ),
             ],
           ),
         ),
@@ -407,78 +561,8 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
     );
   }
 
-  Widget _billingSection(Map<String, dynamic>? data) {
-    if (data == null) return const SizedBox.shrink();
-
-    final reason = data["reason"] ?? {};
-
-    // 📌 Format Date
-    String formatDate(dynamic rawDate) {
-      if (rawDate == null) return "-";
-      try {
-        final date = DateTime.parse(rawDate.toString()).toLocal();
-        return DateFormat("dd MMM yyyy,hh:mm a").format(date);
-      } catch (e) {
-        return rawDate.toString();
-      }
-    }
-
-    String updatedDate = formatDate(data["updated_at"] ?? data["created_at"]);
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: royal, width: 1.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.only(top: 25, left: 12, right: 12, bottom: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-
-              if (reason is Map)
-                ...reason.entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _paymentRow(e.key.toString(), "₹${e.value ?? 0}"),
-                )),
-
-              const SizedBox(height: 10),
-              _paymentRow("Billing Total", "₹${data['total'] ?? 0}"),
-
-              const SizedBox(height: 10),
-              _paymentRow("Billed Date", updatedDate),
-            ],
-          ),
-        ),
-
-        Positioned(
-          top: -12,
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                "BILLING INFORMATION",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _personalInfoSection(Map<String, dynamic> b) {
-    bool _hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
+    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -494,35 +578,28 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
             children: [
               const SizedBox(height: 10),
 
-              // Name (always show)
-              _infoTextField("Name", b["name"]),
+              _infoTextField("Name", b['booking']["name"]),
 
-              // Phone (always show)
               const SizedBox(height: 10),
-              _infoTextField("Phone", b["phone"]),
+              _infoTextField("Phone", b['booking']["phone"]),
 
-              // Alternate Phone (only if exists)
-              if (_hasValue(b["alternate_phone"])) ...[
+              if (hasValue(b['booking']["alternate_phone"])) ...[
                 const SizedBox(height: 10),
-                _infoTextField("Alt Phone", b["alternate_phone"]),
+                _infoTextField("Alt Phone", b['booking']["alternate_phone"]),
               ],
 
-              // Email (only if exists)
-              if (_hasValue(b["email"])) ...[
+              if (hasValue(b['booking']["email"])) ...[
                 const SizedBox(height: 10),
-                _infoTextField("Email", b["email"]),
+                _infoTextField("Email", b['booking']["email"]),
               ],
 
-              // Address (only if exists)
-              if (_hasValue(b["address"])) ...[
+              if (hasValue(b['booking']["address"])) ...[
                 const SizedBox(height: 10),
-                _infoTextField("Address", b["address"]),
+                _infoTextField("Address", b['booking']["address"]),
               ],
             ],
           ),
         ),
-
-        // Floating header
         Positioned(
           top: -12,
           left: 0,
@@ -565,7 +642,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
           child: TextFormField(
             readOnly: true,
             initialValue: value,
-            textAlign: TextAlign.right, // Right-align the value
+            textAlign: TextAlign.right,
             style: const TextStyle(color: royal),
             decoration: _inputDecoration(),
           ),
@@ -599,8 +676,8 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
   }
 
   Widget _paymentInfoSection(Map<String, dynamic> b) {
-    bool _hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
-    bool isPaid = !_hasValue(b["Balance"]) || b["Balance"].toString() == "0";
+    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
+    bool isPaid = !hasValue(b['booking']["Balance"]) || b['booking']["Balance"].toString() == "0";
 
     return Stack(
       clipBehavior: Clip.none,
@@ -616,82 +693,34 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
             children: [
               const SizedBox(height: 10),
 
-              // Number of Days
-              // if (_hasValue(b["specification"]["number_of_days"])) ...[
-              _paymentRow("No. of Days", b["specification"]["number_of_days"].toString()),
-              const SizedBox(height: 10),
-              // ],
-
-              // Number of Rooms
-              // if (_hasValue(b["specification"]["number_of_rooms"])) ...[
-              _paymentRow("No. of Rooms", b["specification"]["number_of_rooms"].toString()),
-              const SizedBox(height: 10),
-              // ],
-
-              _paymentRow("Base Amount", "₹${b["baseamount"]}"),
+              _paymentRow("No. of Days", b['booking']["specification"]["number_of_days"].toString()),
               const SizedBox(height: 10),
 
-              _paymentRow("GST", "₹${b["gst"]}"),
+              _paymentRow("No. of Rooms", b['booking']["specification"]["number_of_rooms"].toString()),
               const SizedBox(height: 10),
-              // Amount
-              // if (_hasValue(b["amount"])) ...[
-              _paymentRow("Total Amount", "₹${b["amount"]}"),
+
+              _paymentRow("Base Amount", "₹${b['booking']["baseamount"]}"),
               const SizedBox(height: 10),
-              // ],
 
-              // Advance
-              // if (_hasValue(b["advance"])) ...[
-              //   _infoTextField("Advance", "₹${b["advance"]}"),
-              //   const SizedBox(height: 10),
-              // ],
+              _paymentRow("GST", "₹${b['booking']["gst"]}"),
+              const SizedBox(height: 10),
 
-              // Advance or Paid
+              _paymentRow("Total Amount", "₹${b['booking']["amount"]}"),
+              const SizedBox(height: 10),
+
               _paymentRow(
                 isPaid ? "Paid" : "Advance",
-                "₹${b["advance"]}",
+                "₹${b['booking']["advance"]}",
               ),
               const SizedBox(height: 10),
 
-              // Balance
-              if (!isPaid && _hasValue(b["Balance"]))
-                _paymentRow("Balance", "₹${b["Balance"]}"),
+              if (!isPaid && hasValue(b['booking']["Balance"]))
+                _paymentRow("Balance", "₹${b['booking']["Balance"]}"),
               const SizedBox(height: 10),
-// Deposit field
-//               Row(
-//                 children: [
-//                   const Expanded(
-//                     flex: 2,
-//                     child: Text(
-//                       "Deposit:",
-//                       style: TextStyle(fontWeight: FontWeight.bold, color: royal),
-//                     ),
-//                   ),
-//                   const SizedBox(width: 10),
-//                   Expanded(
-//                     flex: 4,
-//                     child: TextFormField(
-//                       controller: _depositController,
-//                       keyboardType: TextInputType.number,
-//                       textAlign: TextAlign.right,
-//                       style: const TextStyle(color: royal),
-//                       decoration: _inputDecoration().copyWith(
-//                         hintText: "Enter deposit amount", // <-- Hint text
-//                         hintStyle: TextStyle(color: royal.withOpacity(0.5)),
-//                       ),
-//                       onTap: () {
-//                         if (_depositController.text == "0") {
-//                           _depositController.clear();
-//                         }
-//                       },
-//                     ),
-//                   ),
-//                 ],
-//               ),
+              _paymentRow("Booked At", formatDate(b['booking']['created_at'])),
             ],
           ),
         ),
-
-        // Floating header
         Positioned(
           top: -12,
           left: 0,
@@ -727,342 +756,15 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       filled: true,
-      fillColor: royal.withOpacity(0.05),
+      fillColor: royal.withValues(alpha: 0.05),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    );
-  }
-
-  Widget bookingDetailsCard({
-    required Map<String, dynamic> booking,
-    required Color royal,
-  }) {
-    // Date formatting helper
-    String formatTo12Hour(DateTime dt) {
-      return "${dt.day.toString().padLeft(2, '0')}-"
-          "${dt.month.toString().padLeft(2, '0')}-"
-          "${dt.year} "
-          "${(dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0')}:"
-          "${dt.minute.toString().padLeft(2, '0')} "
-          "${dt.hour >= 12 ? "PM" : "AM"}";
-    }
-
-    String formatDateTime(String? dateTimeStr) {
-      if (dateTimeStr == null) return 'N/A';
-      try {
-        final dt = DateTime.parse(dateTimeStr);
-        return formatTo12Hour(dt);
-      } catch (e) {
-        return 'Invalid date';
-      }
-    }
-
-    final roomNumbers = booking['room_number'] as List<dynamic>?;
-    final idProofs = booking['id_proof'] as List<dynamic>?;
-
-    // Parse alternate phone
-    List<String> alternatePhones = [];
-    if (booking['alternate_phone'] != null &&
-        booking['alternate_phone'].toString().isNotEmpty) {
-      try {
-        final alt = jsonDecode(booking['alternate_phone'].toString());
-        if (alt is List) alternatePhones = alt.map((e) => e.toString()).toList();
-      } catch (_) {
-        alternatePhones =
-            booking['alternate_phone'].toString().split(',').map((e) => e.trim()).toList();
-      }
-    }
-
-    // ---------------- ALIGNED TEXT FOR WHATSAPP ----------------
-    String generateShareText() {
-      String s(dynamic v) => v?.toString() ?? "N/A";
-
-      String formatLine(String label, dynamic value) {
-        return "${label.padRight(13)} : ${s(value)}";
-      }
-
-      final buffer = StringBuffer();
-
-      buffer.writeln("```"); // Start monospace block
-
-      // BOOKING CONFIRMATION HEADER
-      buffer.writeln("   Booking Confirmation");
-      buffer.writeln("---------------------------");
-
-      // HALL / LODGE NAME
-      // buffer.writeln("${hallDetails?['name'] ?? 'Lodge / Hotel'}");
-      buffer.writeln("This is your official booking confirmation message from ${hallDetails?['name']}.");
-      buffer.writeln("");
-
-      // Booking ID
-      buffer.writeln(formatLine("Booking ID", booking['booking_id']));
-      buffer.writeln("⚠️ Keep your Booking ID for future reference.");
-      buffer.writeln("");
-      buffer.writeln("        Booking Details");
-      buffer.writeln(formatLine("Name", booking['name']));
-      buffer.writeln(formatLine("Phone", booking['phone']));
-
-      // if (alternatePhones.isNotEmpty)
-      //   buffer.writeln(formatLine("Alt Phone", alternatePhones.join(', ')));
-      //
-      // if (booking['email'] != null)
-      //   buffer.writeln(formatLine("Email", booking['email']));
-      //
-      // if (booking['address'] != null)
-      //   buffer.writeln(formatLine("Address", booking['address']));
-
-      buffer.writeln("");
-
-      // BOOKING INFO
-      // buffer.writeln("         *Booking Info*");
-      buffer.writeln(formatLine("Check-in", formatDateTime(booking['check_in'])));
-      buffer.writeln(formatLine("Check-out", formatDateTime(booking['check_out'])));
-
-      // Room + Type in one line
-      if (booking['room_name'] != null || booking['room_type'] != null) {
-        String roomInfo =
-        "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim();
-        buffer.writeln(formatLine("Room Type", roomInfo));
-      }
-
-      if (roomNumbers != null && roomNumbers.isNotEmpty)
-        buffer.writeln(formatLine("Room Number", roomNumbers.join(', ')));
-
-      // if (booking['numberofguest'] != null)
-      //   buffer.writeln(formatLine("Guests", booking['numberofguest']));
-      //
-      // if (idProofs != null && idProofs.isNotEmpty)
-      //   buffer.writeln(formatLine("ID Proofs", idProofs.join(', ')));
-      // PAYMENT DETAILS FIRST (as you requested)
-      buffer.writeln("       Payment Details");
-
-      if (booking['baseamount'] != null)
-        buffer.writeln(formatLine("Base Amount", booking['baseamount']));
-
-      if (booking['gst'] != null)
-        buffer.writeln(formatLine("GST", booking['gst']));
-
-      if (booking['amount'] != null)
-        buffer.writeln(formatLine("Total Amount", booking['amount']));
-
-      if (booking['advance'] != null)
-        buffer.writeln(formatLine("Advance", booking['advance']));
-
-      if (booking['deposite'] != null)
-        buffer.writeln(formatLine("Deposite", booking['deposite']));
-
-      // TOTAL PAID = ADVANCE + DEPOSITE
-      double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
-      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
-      double totalPaid = adv + dep;
-
-      if (dep > 0)
-        buffer.writeln(formatLine("Total Paid", totalPaid));
-
-      if (booking['Balance'] != null)
-        buffer.writeln(formatLine("Balance", booking['Balance']));
-
-      buffer.writeln("");
-
-      buffer.writeln("----------------------------------");
-      buffer.writeln("Thank you for choosing us! 😊");
-      buffer.writeln("```"); // End monospace block
-
-      return buffer.toString();
-    }
-
-    Future<void> shareViaWhatsApp() async {
-      if (booking['phone'] == null || booking['phone'].toString().isEmpty) return;
-
-      final text = Uri.encodeComponent(generateShareText());
-      final phoneNumber = booking['phone'].toString().replaceAll(' ', '');
-      final url = 'https://wa.me/$phoneNumber?text=$text';
-
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        debugPrint("Cannot launch WhatsApp");
-      }
-    }
-
-    // -------------------- RETURN UI --------------------
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border.all(color: royal, width: 2),
-              borderRadius: BorderRadius.circular(16),
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: royal.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-
-                // PERSONAL INFO
-                if (booking['name'] != null || booking['phone'] != null)
-                  Column(
-                    children: [
-                      if (booking['name'] != null)
-                        buildLabelValue("Name", booking['name'],royal),
-                      if (booking['phone'] != null)
-                        buildLabelValue("Phone", booking['phone'],royal),
-                      if (booking['address'] != null)
-                        buildLabelValue("Address", booking['address'],royal),
-                      if (alternatePhones.isNotEmpty)
-                        buildLabelValue("Alt Phone", alternatePhones.join(', '),royal),
-                      if (booking['email'] != null)
-                        buildLabelValue("Email", booking['email'],royal),
-                    ],
-                  ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // BOOKING INFO
-                Column(
-                  children: [
-                    if (booking['check_in'] != null)
-                      buildLabelValue("Check-in", formatDateTime(booking['check_in']),royal),
-                    if (booking['check_out'] != null)
-                      buildLabelValue("Check-out", formatDateTime(booking['check_out']),royal),
-                    if (booking['room_name'] != null || booking['room_type'] != null)
-                      buildLabelValue(
-                          "Room",
-                          "${booking['room_name'] ?? ''} ${booking['room_type'] ?? ''}".trim(),royal
-                      ),
-                    if (roomNumbers != null && roomNumbers.isNotEmpty)
-                      buildLabelValue("Room Number", roomNumbers.join(', '),royal),
-                    if (booking['numberofguest'] != null)
-                      buildLabelValue("Guests", booking['numberofguest'].toString(),royal),
-                    if (idProofs != null && idProofs.isNotEmpty)
-                      buildLabelValue("ID Proofs", idProofs.join(', '),royal),
-                  ],
-                ),
-
-                const SizedBox(height: 15),
-                Divider(color: royal, thickness: 1),
-                const SizedBox(height: 10),
-
-                // PAYMENT INFO
-                Column(
-                  children: [
-                    if (booking['baseamount'] != null)
-                      buildLabelValue("Base Amount", booking['baseamount'].toString(),royal),
-                    if (booking['gst'] != null)
-                      buildLabelValue("GST", booking['gst'].toString(),royal),
-                    if (booking['amount'] != null)
-                      buildLabelValue("Total Amount", booking['amount'].toString(),royal),
-                    if (booking['advance'] != null)
-                      buildLabelValue("Advance", booking['advance'].toString(),royal),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Deposite", booking['deposite'].toString(),royal),
-                    if (booking['deposite'] != null)
-                      buildLabelValue("Total Paid",  (
-                          (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
-                              (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
-                      ).toString() ,royal),
-                    if (booking['Balance'] != null)
-                      buildLabelValue("Balance", booking['Balance'].toString(),royal),
-                  ],
-                ),
-
-
-                const SizedBox(height: 20),
-
-                Center(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: royal),
-                    onPressed: shareViaWhatsApp,
-                    icon: const Icon(Icons.share, color: Colors.white),
-                    label: const Text(
-                      "Share via WhatsApp",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // FLOATING BOOKING ID
-        Positioned(
-          top: 10,
-          left: 0,
-          right: 0,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              decoration: BoxDecoration(
-                color: royal,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                "Booking ID: ${booking['booking_id'] ?? 'N/A'}",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildLabelValue(String label, String value, Color royal) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(94),
-          1: FixedColumnWidth(5),
-          2: FlexColumnWidth(),
-        },
-        children: [
-          TableRow(
-            children: [
-              Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: royal)),
-              Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: royal)),
-              Text(value, style: TextStyle(fontSize: 15, color: royal)),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final b = widget.booking;
-
-    final Map<String, dynamic>? billingData = b["billing"];
-    final bool hasBilling =
-        billingData != null || b["status"] == "BILLED";
-
-    final List<dynamic>? partialList = b["PartialCancels"];
-    final bool hasPartial = partialList != null && partialList.isNotEmpty;
-
-    print(b);
 
     return PopScope(
       canPop: false,
@@ -1090,21 +792,7 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
         ),
         body: Padding(
           padding: const EdgeInsets.all(2),
-          child: Form(
-            key: _formKey, // ✔ ONLY ONE FORM NOW
-            child: bookingSuccess && bookingResponse != null
-                ? SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (hallDetails != null) _buildHallCard(hallDetails!),
-                  const SizedBox(height: 20),
-                  bookingDetailsCard(booking: bookingResponse!, royal: royal),
-                  const SizedBox(height: 70),
-                ],
-              ),
-            )
-                : SingleChildScrollView(
+          child:SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
@@ -1134,18 +822,13 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
                   const SizedBox(height: 30),
                   _paymentInfoSection(b),
                   const SizedBox(height: 30),
-                  if (hasPartial) _partialCancelSection(partialList!),
-                  if (hasPartial) const SizedBox(height: 30),
-
-                  if (hasBilling) _billingSection(billingData),
-                  if (hasBilling) const SizedBox(height: 70),
-
+                  _partialCancelSection(b),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
           ),
         ),
-      ),
     );
   }
 

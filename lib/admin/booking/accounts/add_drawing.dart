@@ -20,12 +20,13 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
   final _amountController = TextEditingController();
-  String _selectedType = "OUT"; // default value
+  String _selectedType = "OUT";
 
   bool _isLoading = false;
   bool _isFetching = true;
   bool _showForm = false;
   int? _editingDrawingId;
+  double currentBalance = 0.0;
 
   List<Map<String, dynamic>> _drawings = [];
   Map<String, dynamic>? hallDetails;
@@ -42,6 +43,26 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
     if (lodgeId != null) {
       await _fetchHallDetails();
       await _fetchDrawings();
+      await fetchCurrentBalance(lodgeId);
+    }
+  }
+
+  Future<void> fetchCurrentBalance(int lodgeId) async {
+    try {
+      final url = Uri.parse('$baseUrl/home/current-balance/$lodgeId');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        setState(() {
+          currentBalance = (data['currentBalance'] ?? 0).toDouble();
+        });
+      } else {
+        _showMessage("Failed to fetch current balance");
+      }
+    } catch (e) {
+      _showMessage("Error fetching current balance: $e");
     }
   }
 
@@ -61,7 +82,7 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching drawings: $e");
+      _showMessage("❌ Error fetching drawings: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -76,9 +97,15 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
     final lodgeId = prefs.getInt("lodgeId");
     final userId = prefs.getString("userId");
     if (lodgeId == null || userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ Hall ID or User ID not found")),
-      );
+      _showMessage("❌ Hall ID or User ID not found");
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final amount = double.parse(_amountController.text.trim());
+
+    if (_selectedType == "OUT" && amount > currentBalance) {
+      _showMessage("❌ OUT amount cannot exceed current balance (₹$currentBalance)");
       setState(() => _isLoading = false);
       return;
     }
@@ -87,10 +114,10 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
       "lodge_id": lodgeId,
       "user_id": userId,
       "reason": _reasonController.text.trim(),
-      "amount": double.parse(_amountController.text.trim()),
-      "type": _selectedType, // 👈 added here
-
+      "amount": amount,
+      "type": _selectedType,
     };
+
 
     try {
       http.Response response;
@@ -109,14 +136,9 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_editingDrawingId == null
-                ? "✅ Drawing added successfully"
-                : "✅ Drawing updated successfully"),
-          ),
-        );
-
+        _showMessage(_editingDrawingId == null
+            ? "✅ Drawing added successfully"
+            : "✅ Drawing updated successfully");
         _formKey.currentState!.reset();
         _reasonController.clear();
         _amountController.clear();
@@ -128,12 +150,10 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
 
         _fetchDrawings();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed: ${response.body}")),
-        );
+        _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error submitting drawing: $e");
+      _showMessage("❌ Error submitting drawing: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -160,16 +180,12 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
 
       if (response.statusCode == 200) {
         setState(() => _drawings.removeWhere((e) => e["id"] == drawingId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Drawing deleted successfully")),
-        );
+        _showMessage("✅ Drawing deleted successfully");
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to delete: ${response.body}")),
-        );
+        _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting drawing: $e");
+      _showMessage("❌ Error deleting drawing: $e");
     }
   }
 
@@ -229,8 +245,8 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
                 label: "Type",
                 child: DropdownButtonFormField<String>(
 
-                  value: _selectedType,
-                  dropdownColor: Colors.white, // background of dropdown
+                  initialValue: _selectedType,
+                  dropdownColor: Colors.white,
                   decoration: InputDecoration(
                     isDense: true,
                     enabledBorder: OutlineInputBorder(
@@ -255,11 +271,11 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
                     fillColor: royalLight.withValues(alpha: 0.05),
                   ),
                   style: TextStyle(
-                    color: royal, // text color
+                    color: royal,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
-                  iconEnabledColor: royal, // dropdown arrow color
+                  iconEnabledColor: royal,
                   items: const [
                     DropdownMenuItem(
                       value: "IN",
@@ -557,7 +573,7 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -597,7 +613,7 @@ class _AddDrawingPageState extends State<AddDrawingPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }

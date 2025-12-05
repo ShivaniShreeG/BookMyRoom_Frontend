@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../public/config.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class CreateAdminPage extends StatefulWidget {
   final dynamic hall;
   const CreateAdminPage({super.key, required this.hall});
@@ -22,6 +26,30 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
   bool submitting = false;
   String? message;
 
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _addAdmin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -31,17 +59,12 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
     });
 
     try {
-      final userId = int.tryParse(_userIdController.text.trim());
-      if (userId == null) {
-        setState(() => message = "❌ User ID must be a number");
-        return;
-      }
 
       final response = await http.post(
-        Uri.parse("$baseUrl/users/${widget.hall['hall_id']}/admin"),
+        Uri.parse("$baseUrl/users/${widget.hall['lodge_id']}/admin"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "user_id": userId,
+          "user_id": _userIdController.text.trim(),
           "password": _passwordController.text.trim(),
           "designation": "Owner",
           "name": _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
@@ -52,7 +75,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         setState(() {
-          message = "✅ Admin created successfully for ${widget.hall['name']}";
+          _showMessage("✅ Admin created successfully for ${widget.hall['name']}");
           _userIdController.clear();
           _passwordController.clear();
           _nameController.clear();
@@ -60,10 +83,10 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
           _emailController.clear();
         });
       } else {
-        setState(() => message = "❌ Failed: ${response.body}");
+        _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      setState(() => message = "❌ Error: $e");
+          _showMessage("❌ Error: $e");
     } finally {
       setState(() => submitting = false);
     }
@@ -72,17 +95,17 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFECE5D8), // Beige 🏡
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           "Create Admin - ${widget.hall['name'] ?? 'Hall'}",
           style: const TextStyle(
-            color: Color(0xFFD8C9A9), // Muted Tan 🏺
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF5B6547), // Olive Green 🌿
-        iconTheme: const IconThemeData(color: Color(0xFFD8C9A9)), // Muted Tan 🏺
+        backgroundColor: royal,
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 4,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -96,29 +119,30 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
           key: _formKey,
           child: ListView(
             children: [
-              // ✅ Hall details instead of logo
               Container(
                 padding: const EdgeInsets.all(16),
+
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD8C9A9), // Muted Tan 🏺
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: royal,width: 1)
                 ),
                 child: Column(
                   children: [
                     Text(
-                      "Hall ID: ${widget.hall['hall_id']}",
+                      "Lodge ID: ${widget.hall['lodge_id']}",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5B6547), // Olive Green 🌿
+                        color: royal,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Hall Name: ${widget.hall['name'] ?? ''}",
+                      "Lodge Name: ${widget.hall['name'] ?? ''}",
                       style: const TextStyle(
                         fontSize: 16,
-                        color: Color(0xFF5B6547),
+                        color: royal,
                       ),
                     ),
                   ],
@@ -128,82 +152,137 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
 
               TextFormField(
                 controller: _userIdController,
-                decoration: const InputDecoration(
+                cursorColor: royal,
+                decoration:  InputDecoration(
+                  filled: true,
+                  fillColor: royalLight.withValues(alpha: 0.03),
                   labelText: "New Admin User ID",
-                  labelStyle: TextStyle(color: Color(0xFF5B6547)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF5B6547)),
+                  labelStyle: TextStyle(color: royal),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Color(0xFF5B6547)),
+                style: const TextStyle(color: royal),
                 validator: (v) => v == null || v.isEmpty ? "Enter user ID" : null,
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
+                cursorColor: royal,
+                decoration:  InputDecoration(
+                  filled: true,
+                  fillColor: royalLight.withValues(alpha: 0.03),
                   labelText: "Password",
-                  labelStyle: TextStyle(color: Color(0xFF5B6547)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF5B6547)),
+                  labelStyle: TextStyle(color: royal),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 obscureText: true,
-                style: const TextStyle(color: Color(0xFF5B6547)),
+                style: const TextStyle(color: royal),
                 validator: (v) => v == null || v.length < 4 ? "Min 4 characters" : null,
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                cursorColor: royal,
+                decoration:  InputDecoration(
+                  filled: true,
+                  fillColor: royalLight.withValues(alpha: 0.03),
                   labelText: "Name (optional)",
-                  labelStyle: TextStyle(color: Color(0xFF5B6547)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF5B6547)),
+                  labelStyle: TextStyle(color: royal),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                style: const TextStyle(color: Color(0xFF5B6547)),
+                style: const TextStyle(color: royal),
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
+                decoration:  InputDecoration(
+                  filled: true,
+                  fillColor: royalLight.withValues(alpha: 0.03),
                   labelText: "Phone (optional)",
-                  labelStyle: TextStyle(color: Color(0xFF5B6547)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF5B6547)),
+                  labelStyle: TextStyle(color: royal),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(color: Color(0xFF5B6547)),
+                cursorColor: royal,
+                style: const TextStyle(color: royal),
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
+                decoration:  InputDecoration(
+                  filled: true,
+                  fillColor: royalLight.withValues(alpha: 0.03),
                   labelText: "Email (optional)",
-                  labelStyle: TextStyle(color: Color(0xFF5B6547)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF5B6547)),
+                  labelStyle: TextStyle(color: royal),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: royal, width: 2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                cursorColor: royal,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Color(0xFF5B6547)),
+                style: const TextStyle(color: royal),
               ),
               const SizedBox(height: 24),
 
               submitting
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF5B6547)))
+                  ? const Center(child: CircularProgressIndicator(color: royal))
                   : ElevatedButton(
                 onPressed: _addAdmin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5B6547), // Olive Green 🌿
-                  foregroundColor: const Color(0xFFD8C9A9), // Muted Tan 🏺
+                  backgroundColor: royal,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -219,7 +298,7 @@ class _CreateAdminPageState extends State<CreateAdminPage> {
                 Text(
                   message!,
                   style: const TextStyle(
-                    color: Color(0xFF5B6547), // Always Olive Green 🌿
+                    color: royal,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

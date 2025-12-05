@@ -60,7 +60,7 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
     try {
       await launchUrlString(url, mode: LaunchMode.platformDefault);
     } catch (e) {
-      debugPrint('Error launching dialer: $e');
+      _showMessage('Error launching dialer: $e');
     }
   }
 
@@ -110,7 +110,7 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -168,15 +168,11 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
           ),
 
           const SizedBox(height: 8),
-
-          // Divider
           Container(
             height: 1,
             color: royal.withValues(alpha:0.3),
             margin: const EdgeInsets.only(bottom: 8),
           ),
-
-          // Facilitator name
           Row(
             children: [
               const Icon(Icons.person, size: 18, color: royal),
@@ -192,8 +188,6 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
             ],
           ),
           const SizedBox(height: 6),
-
-          // Contact number (text only)
           Row(
             children: [
               const Icon(Icons.phone, size: 18, color: royal),
@@ -243,7 +237,7 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -300,7 +294,6 @@ class _ViewFacilitatorPageState extends State<ViewFacilitatorPage> {
           children: [
             if (hallDetails != null) _buildHallCard(hallDetails!),
             const SizedBox(height: 16),
-            // 🔍 Search Field
             TextField(
               controller: _searchController,
               decoration: InputDecoration(

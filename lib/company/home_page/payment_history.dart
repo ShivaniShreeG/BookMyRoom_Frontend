@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../public/config.dart';
 
+const Color royalblue = Color(0xFF376EA1);
+const Color royal = Color(0xFF19527A);
+const Color royalLight = Color(0xFF629AC1);
+
 class TransactionHistoryPage extends StatefulWidget {
   final dynamic hall;
 
@@ -23,10 +27,34 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
     _fetchTransactions();
   }
 
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style:  TextStyle(
+            color: isError ? Colors.redAccent.shade400 : royal,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: royal,width: 2)
+        ),
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _fetchTransactions() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/app-payment/history/${widget.hall['hall_id']}'),
+        Uri.parse('$baseUrl/api/app-payment/history/${widget.hall['lodge_id']}'),
       );
 
       if (response.statusCode == 200) {
@@ -36,20 +64,19 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
           loading = false;
         });
       } else if (response.statusCode == 404) {
-        // Handle "no payments found"
         setState(() {
           transactions = [];
           loading = false;
         });
       } else {
         setState(() {
-          error = "Failed to load: ${response.body}";
+          _showMessage("Failed to load: ${response.body}");
           loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        error = "Error: $e";
+        _showMessage("Error: $e");
         loading = false;
       });
     }
@@ -68,38 +95,35 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color oliveGreen = Color(0xFF5B6547);
-    const Color mutedTan = Color(0xFFD8C9A9);
-    const Color beige = Color(0xFFECE5D8);
-
+    
     return Scaffold(
-      backgroundColor: beige,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          "Transactions - ${widget.hall['name'] ?? 'Hall'}",
-          style: const TextStyle(color: mutedTan, fontWeight: FontWeight.bold),
+          "Transactions - ${widget.hall['name'] ?? 'Lodge'}",
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: oliveGreen,
-        iconTheme: const IconThemeData(color: mutedTan),
+        backgroundColor: royal,
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 4,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: oliveGreen))
+          ? const Center(child: CircularProgressIndicator(color: royal))
           : error != null
           ? Center(
         child: Text(
           error!,
-          style: const TextStyle(color: oliveGreen),
+          style: const TextStyle(color: royal),
         ),
       )
           : transactions.isEmpty
           ? const Center(
         child: Text(
           "No transactions found.",
-          style: TextStyle(color: oliveGreen, fontSize: 16),
+          style: TextStyle(color: royal, fontSize: 16),
         ),
       )
           : Padding(
@@ -107,7 +131,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
         child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 80, top: 12),
           itemCount: transactions.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12), // 👈 space between cards
+          separatorBuilder: (context, index) => const SizedBox(height: 12), 
           itemBuilder: (context, index) {
             final tx = transactions[index];
 
@@ -121,12 +145,13 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
             final end = _formatDate(tx['periodEnd']);
 
             return Card(
-              elevation: 0,
+              elevation: 2,
+              shadowColor: royal,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: oliveGreen, width: 1),
+                side: const BorderSide(color: royal, width: 1),
               ),
-              color: Color(0xFFF3E2CB),
+              color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
@@ -138,13 +163,13 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
                         Text(
                           "Transaction ID:",
                           style: TextStyle(
-                            color: oliveGreen,
+                            color: royal,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
                           transactionId,
-                          style: const TextStyle(color: oliveGreen,),
+                          style: const TextStyle(color: royal,),
                         ),
                       ],
                     ),
@@ -152,52 +177,52 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Paid At:", style: TextStyle(color: oliveGreen)),
-                        Text(paidAt, style: TextStyle(color: oliveGreen)),
+                        Text("Paid At:", style: TextStyle(color: royal)),
+                        Text(paidAt, style: TextStyle(color: royal)),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Period Start:", style: TextStyle(color: oliveGreen)),
-                        Text(start, style: TextStyle(color: oliveGreen)),
+                        Text("Period Start:", style: TextStyle(color: royal)),
+                        Text(start, style: TextStyle(color: royal)),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Period End:", style: TextStyle(color: oliveGreen)),
-                        Text(end, style: TextStyle(color: oliveGreen)),
+                        Text("Period End:", style: TextStyle(color: royal)),
+                        Text(end, style: TextStyle(color: royal)),
                       ],
                     ),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Base Amount:", style: TextStyle(color: oliveGreen)),
-                        Text("₹${baseAmount.toStringAsFixed(2)}", style: TextStyle(color: oliveGreen)),
+                        Text("Base Amount:", style: TextStyle(color: royal)),
+                        Text("₹${baseAmount.toStringAsFixed(2)}", style: TextStyle(color: royal)),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("GST (18%):", style: TextStyle(color: oliveGreen)),
-                        Text("₹${gstAmount.toStringAsFixed(2)}", style: TextStyle(color: oliveGreen)),
+                        Text("GST (18%):", style: TextStyle(color: royal)),
+                        Text("₹${gstAmount.toStringAsFixed(2)}", style: TextStyle(color: royal)),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Total:", style: TextStyle(color: oliveGreen, fontWeight: FontWeight.bold)),
+                        Text("Total:", style: TextStyle(color: royal, fontWeight: FontWeight.bold)),
                         Text("₹${total.toStringAsFixed(2)}",
-                            style: const TextStyle(color: oliveGreen,fontWeight: FontWeight.bold)),
+                            style: const TextStyle(color: royal,fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Status:", style: TextStyle(color: oliveGreen)),
+                        Text("Status:", style: TextStyle(color: royal)),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),

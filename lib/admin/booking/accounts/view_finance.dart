@@ -21,10 +21,10 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
   bool _isFetching = true;
 
   List<Map<String, dynamic>> _expenses = [];
-  List<Map<String, dynamic>> _billings = [];
+  List<Map<String, dynamic>> billings = [];
   List<Map<String, dynamic>> _filteredData = [];
   Map<String, dynamic>? hallDetails;
-  List<Map<String, dynamic>> _bookings = [];
+  List<Map<String, dynamic>> bookings = [];
   List<Map<String, dynamic>> _incomes = [];
   List<Map<String, dynamic>> _drawing = [];
   Map<String, double> _calculateTotals() {
@@ -61,7 +61,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
 
 
   DateTime _selectedMonth = DateTime.now();
-  String _selectedFilter = "All"; // All | Income | Expense
+  String _selectedFilter = "All";
   
 
   @override
@@ -90,7 +90,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         _drawing = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
     } catch (e) {
-      debugPrint("❌ Error fetching drawing: $e");
+      _showMessage("❌ Error fetching drawing: $e");
     }
   }
 
@@ -101,7 +101,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         _incomes = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
     } catch (e) {
-      debugPrint("❌ Error fetching incomes: $e");
+      _showMessage("❌ Error fetching incomes: $e");
     }
   }
 
@@ -112,7 +112,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         _expenses = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
     } catch (e) {
-      debugPrint("❌ Error fetching expenses: $e");
+      _showMessage("❌ Error fetching expenses: $e");
     }
   }
 
@@ -120,7 +120,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
   void _filterCombinedData() {
     List<Map<String, dynamic>> combined = [];
 
-    // Add Incomes
     if (_selectedFilter == "All" || _selectedFilter == "Income") {
       combined.addAll(_incomes.where((inc) {
         final date = DateTime.tryParse(inc["created_at"] ?? "");
@@ -134,8 +133,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         "date": inc["created_at"],
       }));
 
-      // Billings
-      combined.addAll(_billings.where((b) {
+      combined.addAll(billings.where((b) {
         final date = DateTime.tryParse(b["updated_at"] ?? "");
         return date != null &&
             date.month == _selectedMonth.month &&
@@ -147,8 +145,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         "date": b["updated_at"],
       }));
 
-      // Booking Advances
-      combined.addAll(_bookings.where((bk) {
+      combined.addAll(bookings.where((bk) {
         final date = DateTime.tryParse(bk["created_at"] ?? "");
         return date != null &&
             date.month == _selectedMonth.month &&
@@ -162,7 +159,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       }));
     }
 
-    // Add Expenses
     if (_selectedFilter == "All" || _selectedFilter == "Expense") {
       combined.addAll(_expenses.where((e) {
         final date = DateTime.tryParse(e["created_at"] ?? "");
@@ -177,7 +173,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       }));
     }
 
-    // Add Drawing In
     if (_selectedFilter == "All" || _selectedFilter == "Drawing In") {
       combined.addAll(_drawing.where((d) {
         final date = DateTime.tryParse(d["created_at"] ?? "");
@@ -193,7 +188,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       }));
     }
 
-    // Add Drawing Out
     if (_selectedFilter == "All" || _selectedFilter == "Drawing Out") {
       combined.addAll(_drawing.where((d) {
         final date = DateTime.tryParse(d["created_at"] ?? "");
@@ -209,7 +203,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       }));
     }
 
-    // Sort by date descending
     combined.sort((a, b) {
       DateTime da = DateTime.tryParse(a["date"] ?? "") ?? DateTime.now();
       DateTime db = DateTime.tryParse(b["date"] ?? "") ?? DateTime.now();
@@ -280,7 +273,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
 
   Widget _monthDropdown(int value, Function(int) onChanged) {
     return DropdownButtonFormField<int>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: "Month",
         labelStyle: TextStyle(color: royal),
@@ -299,7 +292,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
 
   Widget _yearDropdown(int value, Function(int) onChanged) {
     return DropdownButtonFormField<int>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: "Year",
         labelStyle: TextStyle(color: royal),
@@ -345,11 +338,11 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         break;
       case "Drawing In":
         amountColor = Colors.teal.shade700;
-        iconData = Icons.south_west; // inward arrow style
+        iconData = Icons.south_west;
         break;
       case "Drawing Out":
         amountColor = Colors.orange;
-        iconData = Icons.north_east; // outward arrow style
+        iconData = Icons.north_east;
         break;
       default:
         amountColor = Colors.grey.shade700;
@@ -404,12 +397,10 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // === Row 1: Income & Expense ===
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Income
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -433,8 +424,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
                   ),
                 ],
               ),
-
-              // Expense
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -461,14 +450,11 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
             ],
           ),
 
-          const SizedBox(height: 14), // space between rows
-
-          // === Row 2: Drawing In & Drawing Out ===
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Drawing In
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -492,8 +478,6 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
                   ),
                 ],
               ),
-
-              // Drawing Out
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -523,33 +507,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
       ),
     );
   }
-
-  // Widget _buildFinanceCard(Map<String, dynamic> item) {
-  //   final bool isIncome = item["type"] == "Income";
-  //   final Color amountColor = isIncome ? Colors.green.shade700 : Colors.red.shade700;
-  //
-  //   return Card(
-  //     color: backgroundColor,
-  //     elevation: 3,
-  //     margin: const EdgeInsets.symmetric(vertical: 6),
-  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  //     child: ListTile(
-  //       leading: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: amountColor),
-  //       title: Text(item["title"], style: TextStyle(color: royal, fontWeight: FontWeight.bold)),
-  //       subtitle: Text(
-  //         "${isIncome ? 'Income' : 'Expense'}: ₹${item["amount"]}",
-  //         style: TextStyle(color: amountColor, fontWeight: FontWeight.w600),
-  //       ),
-  //       trailing: Text(
-  //         item["date"] != null
-  //             ? DateFormat('dd/MM/yyyy').format(DateTime.parse(item["date"]))
-  //             : "",
-  //         style: TextStyle(color: royal, fontSize: 12),
-  //       ),
-  //     ),
-  //   );
-  // }
-
+  
   Widget _buildHallCard(Map<String, dynamic> hall) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
@@ -581,7 +539,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -621,7 +579,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -648,6 +606,7 @@ class _ViewFinancePageState extends State<ViewFinancePage> {
                 });
               },
               selectedColor: royal,
+              checkmarkColor: Colors.white,
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : royal,

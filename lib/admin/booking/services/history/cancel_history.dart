@@ -41,7 +41,6 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
     if (lodgeId == null) return;
 
     try {
-      /// Fetch Full Cancel Data
       final fullUrl = Uri.parse("$baseUrl/history/cancelled/$lodgeId");
       final fullRes = await http.get(fullUrl);
 
@@ -52,44 +51,35 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
           fullCancelData = List<Map<String, dynamic>>.from(fullData);
         }
       }
-
-      /// Fetch Partial Cancel Data
       final partialUrl = Uri.parse("$baseUrl/history/partial/$lodgeId");
       final partialRes = await http.get(partialUrl);
 
       List<Map<String, dynamic>> partialCancelData = [];
       if (partialRes.statusCode == 200) {
         final partialData = jsonDecode(partialRes.body);
-
         if (partialData is List) {
           partialCancelData = partialData.map<Map<String, dynamic>>((p) {
             final booking = p["booking"];
-
-            /// Merge partial cancel data into booking display object
             return {
               "partial_id": p["id"],
               "booking_id": booking["booking_id"],
               "name": booking["name"],
               "phone": booking["phone"],
-              "room_name": booking["room_name"],
-              "room_type": booking["room_type"],
-              "room_number": p["room_number"], // removed rooms list
+              "booked_room":booking["booked_room"],
               "check_in": booking["check_in"],
               "check_out": booking["check_out"],
-              "status": "PARTIAL CANCEL", // 👈 important
-              "partial_data": p, // send raw partial data for details page
+              "status": "PARTIAL CANCEL",
+              "partial_data": p,
             };
           }).toList();
         }
       }
 
-      /// Combine both lists
       List<Map<String, dynamic>> finalData = [
         ...fullCancelData,
         ...partialCancelData
       ];
 
-      /// Sort by created_at if needed
       finalData.sort((a, b) {
         return DateTime.parse(a["check_in"])
             .compareTo(DateTime.parse(b["check_in"]));
@@ -125,7 +115,7 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }
@@ -204,7 +194,7 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -239,7 +229,7 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => PartialCancelDetailsPage(booking: b),
+              builder: (_) => PartialCancelDetailsPage(booking: b["partial_data"]),
             ),
           );
         } else {
@@ -316,29 +306,33 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
 
             const SizedBox(height: 6),
 
-            Row(
-              children: [
-                Icon(Icons.meeting_room, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "${b["room_name"]} (${b["room_type"]})",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+            if (b["booked_room"] != null && (b["booked_room"] as List).isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: (b["booked_room"] as List<dynamic>).map<Widget>((room) {
+                  final roomName = room[0] ?? "-";
+                  final roomType = room[1] ?? "-";
+                  final roomNumbers = room[2] != null && (room[2] as List).isNotEmpty
+                      ? (room[2] as List).join(", ")
+                      : "-";
 
-            const SizedBox(height: 4),
-
-            Row(
-              children: [
-                Icon(Icons.roofing_sharp, size: 18, color: royal),
-                const SizedBox(width: 6),
-                Text(
-                  "Room Number:${b["room_number"].join(", ")}",
-                  style: TextStyle(color: royal, fontSize: 15),
-                ),
-              ],
-            ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.meeting_room, size: 18, color: royal),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "$roomName ($roomType) • Rooms: $roomNumbers",
+                            style: TextStyle(color: royal, fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
 
             const SizedBox(height: 8),
 
@@ -398,7 +392,6 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search box
             hallDetails == null
                 ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
                 : _buildHallCard(hallDetails!),
@@ -406,12 +399,23 @@ class _CancelHistoryPageState extends State<CancelHistoryPage> {
             const SizedBox(height: 16),
             TextField(
               controller: _searchController,
+              style: TextStyle(color: royal),
+              cursorColor: royal,
               decoration: InputDecoration(
                 hintText: "Search by name, phone, room, booking id...",
+                hintStyle: TextStyle(color: royal),
                 prefixIcon: Icon(Icons.search, color: royal),
                 filled: true,
                 fillColor: royalLight.withAlpha(20),
                 border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: royal, width: 1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: royal, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),

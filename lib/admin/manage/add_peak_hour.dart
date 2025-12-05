@@ -66,8 +66,8 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
     if (lodgeId != null) {
-      await _fetchHallDetails(lodgeId); // fetch hall info
-      await _fetchPeakHours();// fetch admins
+      await _fetchHallDetails(lodgeId);
+      await _fetchPeakHours();
     }
   }
 
@@ -87,7 +87,7 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
         });
       }
     } catch (e) {
-      // debugPrint("❌ Error fetching peak hours: $e");
+      _showMessage("❌ Error fetching peak hours: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -160,7 +160,7 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
         lodgeDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      // print("Error fetching hall details: $e");
+      _showMessage("Error fetching hall details: $e");
     } finally {
       setState(() {});
     }
@@ -306,7 +306,6 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
           key: _formKey,
           child: Column(
             children: [
-              // Date
               labeledTanRow(
                 label: "DATE",
                 child: GestureDetector(
@@ -369,7 +368,6 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
                 ),
               ),
 
-              // Reason
               labeledTanRow(
                 label: "REASON",
                 child: DropdownButtonFormField<String>(
@@ -377,10 +375,10 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
                   dropdownColor: Colors.white,
                   style: TextStyle(color: royal),
                   hint: Text(
-                    "Select a reason",      // ✅ Hint text
+                    "Select a reason",
                     style: TextStyle(
                       color: royal,
-                      fontSize: 15,         // ✅ Reduced hint size
+                      fontSize: 15,
                     ),
                   ),
                   items: [
@@ -424,8 +422,6 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
                 ),
               ),
 
-
-              // Custom Reason (if Other selected)
               if (_showCustomReasonField)
                 labeledTanRow(
                   label: "",
@@ -450,7 +446,7 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
                           borderSide: const BorderSide(color: Colors.redAccent, width: 2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        hintText: "Enter Reason",          // ✅ Hint added
+                        hintText: "Enter Reason",
                         hintStyle: TextStyle(color: royal,fontSize: 15),isDense: true,
                          filled:true,
                          fillColor:royalLight.withValues(alpha: 0.05)),
@@ -532,12 +528,11 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center, // ✅ vertically center the row
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Label
           Container(
             width: screenWidth * labelWidthFactor,
-            alignment: Alignment.centerLeft, // ✅ vertically center, keep left aligned
+            alignment: Alignment.centerLeft,
             child: Text(
               label,
               style: TextStyle(
@@ -548,7 +543,6 @@ class _PeakHoursPageState extends State<PeakHoursPage> {
           ),
           const SizedBox(width: 10),
 
-          // Value/Input takes remaining width
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

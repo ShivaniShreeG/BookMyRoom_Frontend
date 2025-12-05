@@ -74,7 +74,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching incomes: $e");
+      _showMessage("❌ Error fetching incomes: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -87,18 +87,16 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
     final prefs = await SharedPreferences.getInstance();
     final lodgeId = prefs.getInt("lodgeId");
-    final userId = prefs.getString("userId"); // ✅ get user_id
+    final userId = prefs.getString("userId");
     if (lodgeId == null || userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ Hall ID or User ID not found")),
-      );
+      _showMessage("❌ Hall ID or User ID not found");
       setState(() => _isLoading = false);
       return;
     }
 
     final body = {
       "lodge_id": lodgeId,
-      "user_id": userId, // ✅ include user_id
+      "user_id": userId,
       "reason": _reasonController.text.trim(),
       "amount": double.parse(_amountController.text.trim()),
     };
@@ -120,14 +118,9 @@ class _AddIncomePageState extends State<AddIncomePage> {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_editingIncomeId == null
-                ? "✅ Income added successfully"
-                : "✅ Income updated successfully"),
-          ),
-        );
-
+        _showMessage(_editingIncomeId == null
+            ? "✅ Income added successfully"
+            : "✅ Income updated successfully");
         _formKey.currentState!.reset();
         _reasonController.clear();
         _amountController.clear();
@@ -139,12 +132,10 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
         _fetchIncomes();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed: ${response.body}")),
-        );
+        _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error submitting income: $e");
+      _showMessage("❌ Error submitting income: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -157,16 +148,12 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
       if (response.statusCode == 200) {
         setState(() => _incomes.removeWhere((e) => e["id"] == incomeId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Income deleted successfully")),
-        );
+        _showMessage("✅ Income deleted successfully");
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to delete: ${response.body}")),
-        );
+        _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting income: $e");
+      _showMessage("❌ Error deleting income: $e");
     }
   }
 
@@ -204,15 +191,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
       _showForm = true;
     });
   }
-
-  // InputDecoration _buildInputDecoration(String label) {
-  //   return InputDecoration(
-  //     labelText: label,
-  //     labelStyle: TextStyle(color: royal),
-  //     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: royal)),
-  //     focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: royal)),
-  //   );
-  // }
 
   Widget _buildIncomeForm() {
     return Card(
@@ -400,7 +378,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
     String? Function(String?)? validator,
     TextInputType inputType = TextInputType.text,
     bool obscureText = false,
-    // List<TextInputFormatter>? inputFormatters,
     int? maxLength,
     void Function(String)? onChanged,
     Widget? child,
@@ -412,7 +389,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 🔹 Label
           Container(
             width: screenWidth * 0.25,
             alignment: Alignment.centerLeft,
@@ -426,8 +402,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
             ),
           ),
           const SizedBox(width: 10),
-
-          // 🔹 Field Area
           Expanded(
             child: Container(
               child: child ??
@@ -436,7 +410,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     keyboardType: inputType,
                     obscureText: obscureText,
                     validator: validator,
-                    // inputFormatters: inputFormatters,
                     maxLength: maxLength,
                     onChanged: onChanged,
                     style: TextStyle(color: royal),
@@ -477,43 +450,6 @@ class _AddIncomePageState extends State<AddIncomePage> {
     );
   }
 
-  // Widget labeledTanRow({
-  //   required String label,
-  //   String? value,
-  //   Widget? child,
-  //   String? hint,
-  //   double labelWidthFactor = 0.25,
-  // }) {
-  //   final screenWidth = MediaQuery.of(context).size.width;
-  //
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 6),
-  //     child: Row(
-  //       crossAxisAlignment: CrossAxisAlignment.center,
-  //       children: [
-  //         Container(
-  //           width: screenWidth * labelWidthFactor,
-  //           alignment: Alignment.centerLeft,
-  //           child: Text(
-  //             label,
-  //             style: TextStyle(
-  //               color: royal,
-  //               fontWeight: FontWeight.bold,
-  //             ),
-  //           ),
-  //         ),
-  //         const SizedBox(width: 10),
-  //         Expanded(
-  //             child: child ?? Text(
-  //               value ?? "—",
-  //               style: TextStyle(color: royal),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   Widget _buildHallCard(Map<String, dynamic> hall) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
@@ -545,7 +481,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -585,7 +521,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
         hallDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      _showMessage("Error fetching hall details: $e");
+      _showMessage("Error fetching lodge details: $e");
     } finally {
       setState(() {});
     }

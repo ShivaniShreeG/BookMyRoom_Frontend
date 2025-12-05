@@ -141,7 +141,6 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               ),
               const SizedBox(height: 25),
 
-              // 🧱 Text Field with Border
               TextFormField(
                 controller: _issueController,
                 maxLines: 5,

@@ -392,7 +392,7 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
           if (_filteredData.isEmpty)
             pw.Center(child: pw.Text("No transactions for this month.", style: pw.TextStyle(font: tamilFont,fontSize: 9)))
           else
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: ["S.No", "Date", "Particular", "Income", "Expense", "Drawing In", "Drawing Out"],
               headerStyle: pw.TextStyle(
                 font: tamilFontBold,

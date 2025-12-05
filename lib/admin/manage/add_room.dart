@@ -29,10 +29,10 @@ class _RoomsPageState extends State<RoomsPage> {
   List<TextEditingController> _roomNameControllers = [];
   List<TextEditingController> _roomTypeControllers = [];
   List<TextEditingController> roomNumberControllers = [];
-  List<FocusNode> roomFocusNodes = []; // 👈 Add this line
+  List<FocusNode> roomFocusNodes = [];
 
   Map<String, dynamic>? lodgeDetails;
-  Map<String, dynamic>? _editingRoom; // ✅ Holds room being edited
+  Map<String, dynamic>? _editingRoom;
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -89,7 +89,6 @@ class _RoomsPageState extends State<RoomsPage> {
   }
 
   void _resetRoomFields({bool addEmpty = false}) {
-    // Dispose old controllers/nodes to avoid leaks
     for (final c in roomNumberControllers) {
       c.dispose();
     }
@@ -117,7 +116,7 @@ class _RoomsPageState extends State<RoomsPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching rooms: $e");
+      _showMessage("❌ Error fetching rooms: $e");
     } finally {
       setState(() => _isLoadingRooms = false);
     }
@@ -143,16 +142,13 @@ class _RoomsPageState extends State<RoomsPage> {
       _showForm = true;
       _editingRoom = room;
 
-      // Room name
       _roomNameControllers = [
         TextEditingController(text: room["room_name"] ?? "")
       ];
 
-      // Determine if room type is one of the predefined ones
       final roomType = room["room_type"] ?? "";
       final predefinedTypes = ["AC", "Non AC", "Others"];
 
-      // For "Others", show custom field
       if (predefinedTypes.contains(roomType)) {
         _roomTypeControllers = [TextEditingController(text: roomType)];
         selectedRoomType = roomType;
@@ -162,10 +158,9 @@ class _RoomsPageState extends State<RoomsPage> {
         _roomTypeControllers = [TextEditingController(text: "Others")];
         selectedRoomType = "Others";
         isCustomType = true;
-        customRoomTypeController.text = roomType; // custom type name
+        customRoomTypeController.text = roomType;
       }
 
-      // Room numbers
       final numbers = (room["room_number"] as List?)?.map((e) => e.toString()).toList() ?? [];
       _resetRoomFields();
       for (final num in numbers) {
@@ -222,7 +217,7 @@ class _RoomsPageState extends State<RoomsPage> {
           Expanded(
             child: Center(
               child: Text(
-                hall['name']?.toString().toUpperCase() ?? "HALL NAME",
+                hall['name']?.toString().toUpperCase() ?? "LODGE NAME",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -257,7 +252,6 @@ class _RoomsPageState extends State<RoomsPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Left side: Room details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,7 +278,6 @@ class _RoomsPageState extends State<RoomsPage> {
               ),
             ),
 
-            // ✅ Right side: Edit & Delete stacked vertically
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -502,14 +495,12 @@ class _RoomsPageState extends State<RoomsPage> {
                             if (i < roomFocusNodes.length - 1) {
                               roomFocusNodes[i + 1].requestFocus();
                             } else {
-                              // If it's the last field, add a new one
                               setState(() {
                                 final newController = TextEditingController();
                                 final newFocusNode = FocusNode();
                                 roomNumberControllers.add(newController);
                                 roomFocusNodes.add(newFocusNode);
                               });
-                              // Delay to ensure UI rebuilds before focusing
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 roomFocusNodes.last.requestFocus();
                               });

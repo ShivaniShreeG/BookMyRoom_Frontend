@@ -86,7 +86,7 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching facilitators: $e");
+      _showMessage("❌ Error fetching facilitators: $e");
     } finally {
       setState(() => _isFetching = false);
     }
@@ -147,7 +147,7 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
         _showMessage("❌ Failed: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error submitting facilitator: $e");
+      _showMessage("❌ Error submitting facilitator: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -165,7 +165,7 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
         _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      debugPrint("❌ Error deleting facilitator: $e");
+      _showMessage("❌ Error deleting facilitator: $e");
     }
   }
 
@@ -177,8 +177,8 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: royal, // your border color
-            width: 1.5,   // border thickness
+            color: royal,
+            width: 1.5,
           ),
         ),
         title: Text(
@@ -385,7 +385,6 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 🔹 Label
           Container(
             width: screenWidth * 0.25,
             alignment: Alignment.centerLeft,
@@ -399,8 +398,6 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
             ),
           ),
           const SizedBox(width: 10),
-
-          // 🔹 Field Area
           Expanded(
             child: Container(
               child: child ??

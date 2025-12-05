@@ -83,7 +83,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
         });
       }
     } catch (e) {
-      debugPrint("❌ Error fetching instructions: $e");
+      _showMessage("❌ Error fetching instructions: $e");
     } finally {
       setState(() => _isLoadingInstructions = false);
     }
@@ -124,7 +124,6 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         _controllers.clear();
         _showForm = false;
-        // Refresh instructions immediately
         await _fetchInstructions();
         _showMessage("✅ Instructions added successfully");
       } else {
@@ -145,7 +144,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
         lodgeDetails = jsonDecode(response.body);
       }
     } catch (e) {
-      // print("Error fetching hall details: $e");
+      _showMessage("Error fetching hall details: $e");
     } finally {
       setState(() {});
     }
@@ -182,7 +181,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
                 : Container(
               width: 70,
               height: 70,
-              color: Colors.white, // 👈 soft teal background
+              color: Colors.white,
               child: const Icon(
                 Icons.home_work_rounded,
                 color: royal,
@@ -220,14 +219,13 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
       final response = await http.delete(url);
 
       if (response.statusCode == 200) {
-        // Refresh instructions immediately
         await _fetchInstructions();
         _showMessage("✅ Instruction deleted");
       } else {
         _showMessage("❌ Failed to delete: ${response.body}");
       }
     } catch (e) {
-      // debugPrint("❌ Error deleting instruction: $e");
+      _showMessage("❌ Error deleting instruction: $e");
     }
   }
 
@@ -241,8 +239,8 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: royal, // your border color
-            width: 1.5,   // border thickness
+            color: royal,
+            width: 1.5,
           ),
         ),
         title: Center(
@@ -251,12 +249,12 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
             style: TextStyle(
               color: royal,
             ),
-            textAlign: TextAlign.center, // ensures text is centered
+            textAlign: TextAlign.center,
           ),
         ),
         content: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 300), // max height for scrolling
+            constraints: BoxConstraints(maxHeight: 300),
             child: TextFormField(
               controller: controller,
               decoration: InputDecoration(
@@ -272,7 +270,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
               style: TextStyle(color: royal),
               cursorColor: royal,
               keyboardType: TextInputType.multiline,
-              maxLines: null, // allow multiple lines
+              maxLines: null,
             ),
           ),
         ),
@@ -308,7 +306,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
                  _showMessage("❌ Failed to update: ${response.body}");
                 }
               } catch (e) {
-                // debugPrint("❌ Error updating instruction: $e");
+                _showMessage("❌ Error updating instruction: $e");
               }
             },
             child: Text("Save", style: TextStyle(color: Colors.white)),
@@ -324,8 +322,8 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: royal, // your border color
-          width: 1.5,   // border thickness
+          color: royal,
+          width: 1.5,
         ),
       ),
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -369,8 +367,8 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: royal, // your border color
-            width: 1.5,   // border thickness
+            color: royal,
+            width: 1.5,
           ),
         ),
         title: Text("Delete Instruction", style: TextStyle(color: royal)),
@@ -413,10 +411,7 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
             children: [
               ..._controllers.map((controller) {
                 int index = _controllers.indexOf(controller);
-
-                // Ensure a FocusNode exists for this field
                 if (focusNodes.length <= index) focusNodes.add(FocusNode());
-
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: labeledTanRow(
@@ -425,8 +420,8 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
                       controller: controller,
                       focusNode: focusNodes[index],
                       decoration:  InputDecoration(
-                        border: InputBorder.none, // Remove default underline
-                        hintText: "Enter Instructions",          // ✅ Hint added
+                        border: InputBorder.none,
+                        hintText: "Enter Instructions",
                         hintStyle: TextStyle(color: royal,fontSize: 15),
                         isDense: true,
                         filled: true,
@@ -457,22 +452,18 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
                       focusNodes.add(FocusNode());
                     });
 
-                    // Focus the new field after rebuild
                     Future.delayed(const Duration(milliseconds: 100), () {
                       focusNodes.last.requestFocus();
                     });
                   },
-                  icon: const Icon(Icons.add, color: Colors.white), // icon color
+                  icon: const Icon(Icons.add, color: Colors.white),
                   label: const Text(
                     "Add another instruction",
-                    style: TextStyle(color: Colors.white), // text color
+                    style: TextStyle(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: royal, // button background
+                    backgroundColor: royal,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    // shape: RoundedRectangleBorder(
-                    //   borderRadius: BorderRadius.circular(12), // rounded corners
-                    // ),
                   ),
                 ),
               ),
@@ -523,12 +514,11 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center, // ✅ vertically center the row
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Label
           Container(
             width: screenWidth * labelWidthFactor,
-            alignment: Alignment.centerLeft, // ✅ vertically center, keep left aligned
+            alignment: Alignment.centerLeft,
             child: Text(
               label,
               style: TextStyle(
@@ -538,8 +528,6 @@ class _HallInstructionsPageState extends State<HallInstructionsPage> {
             ),
           ),
           const SizedBox(width: 10),
-
-          // Value/Input takes remaining width
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
