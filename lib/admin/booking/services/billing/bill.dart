@@ -47,6 +47,7 @@ class _BillPageState extends State<BillPage> {
     }
     return null;
   }
+
   @override
   void initState() {
     super.initState();
@@ -189,7 +190,6 @@ class _BillPageState extends State<BillPage> {
     final userId = bookingDetails['user_id'].toString();
     final adminDetails = await fetchAdminDetails(hallId, userId);
     final totalPayment = balancePayment;
-
     final totalPaymentLabel = totalPayment < 0 ? "REFUND" : "TOTAL PAYMENT";
     final totalPaymentDisplay = totalPayment < 0
         ? "Rs.${totalPayment.abs()}"
@@ -291,7 +291,7 @@ class _BillPageState extends State<BillPage> {
             if ((bookingDetails['check_in'] ?? '').toString().isNotEmpty)
               ["CHECK-IN", formatDate(bookingDetails['check_in'])],
             if ((bookingDetails['check_out'] ?? '').toString().isNotEmpty)
-              ["CHECK-OUT", formatDate(bookingDetails['check_out'])],
+              ["CHECK-OUT", formatDate(serverData?['new_check_out'])],
             if ((bookingDetails['numberofguest'] ?? '').toString().isNotEmpty)
               ["NUMBER OF GUEST", bookingDetails['numberofguest'].toString()],
           ], royalLight, font),
@@ -325,9 +325,7 @@ class _BillPageState extends State<BillPage> {
                       if (bookingDetails['specification']['number_of_rooms'] != null) "NUMBER OF ROOMS",
                       if (bookingDetails['baseamount'] != null) "BASE AMOUNT",
                       if (bookingDetails['gst'] != null) "GST",
-                      if (bookingDetails['amount'] != null) "TOTAL AMOUNT",
-                      if (bookingDetails['advance'] != null) "AMOUNT PAID",
-                      if (bookingDetails['Balance'] != null && bookingDetails['balance'] != 0) "BALANCE",
+                      if (bookingDetails['amount'] != null) "TOTAL AMOUNT RECEIVED",
                       if (bookingDetails['deposite'] != null && bookingDetails['deposite'] != 0) "DEPOSITE",
 
                     ].map((label) {
@@ -381,8 +379,6 @@ class _BillPageState extends State<BillPage> {
                       if (bookingDetails['baseamount'] != null) "Rs.${bookingDetails['baseamount']}",
                       if (bookingDetails['gst'] != null) "Rs.${bookingDetails['gst']}",
                       if (bookingDetails['amount'] != null) "Rs.${bookingDetails['amount']}",
-                      if (bookingDetails['advance'] != null) "Rs.${bookingDetails['advance']}",
-                      if (bookingDetails['Balance'] != null && bookingDetails['balance'] != 0) "Rs.${bookingDetails['Balance']}",
                       if (bookingDetails['deposite'] != null && bookingDetails['deposite'] != 0) "Rs.${bookingDetails['deposite']}",
                     ].map((amount) {
                       final isBalance = amount.contains(bookingDetails['Balance'].toString());
@@ -408,159 +404,182 @@ class _BillPageState extends State<BillPage> {
             ],
           ),
           pw.SizedBox(height: 6),
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Container(
-                width: PdfPageFormat.a4.availableWidth * 0.80,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Container(
-                      width: double.infinity,
-                      color: royalColor,
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text(
-                        "BILLING INFORMATION",
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.white,
-                            font: fontBold,
-                            fontSize: 9),
-                      ),
+          if ((reasons.isNotEmpty && reasons.values.any((v) => v != null && v != 0))
+              || (totalAmount != null && totalAmount != 0)
+              || (deposite != null && deposite != 0))
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                    width: PdfPageFormat.a4.availableWidth * 0.80,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Container(
+                          width: double.infinity,
+                          color: royalColor,
+                          padding: const pw.EdgeInsets.all(2),
+                          child: pw.Text(
+                            "BILLING INFORMATION",
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColors.white,
+                                font: fontBold,
+                                fontSize: 9),
+                          ),
+                        ),
+                        pw.SizedBox(height: 6),
+
+                        ...reasons.entries
+                            .where((e) =>
+                        e.value != null && e.value
+                            .toString()
+                            .isNotEmpty)
+                            .map((e) =>
+                            pw.Container(
+                              width: double.infinity,
+                              color: royalLight,
+                              padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              margin: const pw.EdgeInsets.only(bottom: 2),
+                              child: pw.Text(
+                                e.key.toUpperCase(),
+                                style: pw.TextStyle(font: font, fontSize: 9),
+                              ),
+                            )),
+                        if (totalAmount != null && totalAmount != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              "TOTAL",
+                              style: pw.TextStyle(fontWeight: pw.FontWeight
+                                  .bold, font: fontBold, fontSize: 9),
+                            ),
+                          ),
+                        if (deposite != null && deposite != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              "DEPOSIT",
+                              style: pw.TextStyle(font: font, fontSize: 9),
+                            ),
+                          ),
+                        if (deposite != null && deposite != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              totalPaymentLabel,
+                              style: pw.TextStyle(fontWeight: pw.FontWeight
+                                  .bold, font: fontBold, fontSize: 9),
+                            ),
+                          ),
+                      ],
                     ),
-                    pw.SizedBox(height: 6),
+                  ),
 
-                    ...reasons.entries
-                        .where((e) => e.value != null && e.value.toString().isNotEmpty)
-                        .map((e) => pw.Container(
-                      width: double.infinity,
-                      color: royalLight,
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      margin: const pw.EdgeInsets.only(bottom: 2),
-                      child: pw.Text(
-                        e.key.toUpperCase(),
-                        style: pw.TextStyle(font: font, fontSize: 9),
-                      ),
-                    )),
-                    if (totalAmount != null&&totalAmount!=0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          "TOTAL",
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, font: fontBold, fontSize: 9),
-                        ),
-                      ),
-                    if (deposite != null && deposite != 0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          "DEPOSIT",
-                          style: pw.TextStyle(font: font, fontSize: 9),
-                        ),
-                      ),
-                    if (deposite != null && deposite != 0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          totalPaymentLabel,
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, font: fontBold, fontSize: 9),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+                  pw.SizedBox(width: PdfPageFormat.a4.availableWidth * 0.02),
 
-              pw.SizedBox(width: PdfPageFormat.a4.availableWidth * 0.02),
+                  pw.Container(
+                    width: PdfPageFormat.a4.availableWidth * 0.27,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Container(
+                          width: double.infinity,
+                          color: royalColor,
+                          padding: const pw.EdgeInsets.all(2),
+                          child: pw.Text(
+                            "AMOUNT",
+                            textAlign: pw.TextAlign.right,
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColors.white,
+                                font: fontBold,
+                                fontSize: 9),
+                          ),
+                        ),
+                        pw.SizedBox(height: 6),
 
-              pw.Container(
-                width: PdfPageFormat.a4.availableWidth * 0.27,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Container(
-                      width: double.infinity,
-                      color: royalColor,
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text(
-                        "AMOUNT",
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.white,
-                            font: fontBold,
-                            fontSize: 9),
-                      ),
+                        ...reasons.entries
+                            .where((e) =>
+                        e.value != null && e.value
+                            .toString()
+                            .isNotEmpty)
+                            .map((e) =>
+                            pw.Container(
+                              width: double.infinity,
+                              color: royalLight,
+                              padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              margin: const pw.EdgeInsets.only(bottom: 2),
+                              child: pw.Text(
+                                "Rs.${e.value}",
+                                textAlign: pw.TextAlign.right,
+                                style: pw.TextStyle(font: font, fontSize: 9),
+                              ),
+                            )),
+
+                        if (totalAmount != null && totalAmount != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              "Rs.$totalAmount",
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(fontWeight: pw.FontWeight
+                                  .bold, font: fontBold, fontSize: 9),
+                            ),
+                          ),
+
+                        if (deposite != null && deposite != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              "Rs.$deposite",
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(font: font, fontSize: 9),
+                            ),
+                          ),
+
+                        if (deposite != null && deposite != 0)
+                          pw.Container(
+                            width: double.infinity,
+                            color: royalLight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            margin: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(
+                              totalPaymentDisplay,
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(fontWeight: pw.FontWeight
+                                  .bold, font: fontBold, fontSize: 9),
+                            ),
+                          ),
+
+                      ],
                     ),
-                    pw.SizedBox(height: 6),
-
-                    ...reasons.entries
-                        .where((e) => e.value != null && e.value.toString().isNotEmpty)
-                        .map((e) => pw.Container(
-                      width: double.infinity,
-                      color: royalLight,
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      margin: const pw.EdgeInsets.only(bottom: 2),
-                      child: pw.Text(
-                        "Rs.${e.value}",
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(font: font, fontSize: 9),
-                      ),
-                    )),
-
-                    if (totalAmount != null && totalAmount!=0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          "Rs.$totalAmount",
-                          textAlign: pw.TextAlign.right,
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, font: fontBold, fontSize: 9),
-                        ),
-                      ),
-
-                    if (deposite != null && deposite != 0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          "Rs.$deposite",
-                          textAlign: pw.TextAlign.right,
-                          style: pw.TextStyle(font: font, fontSize: 9),
-                        ),
-                      ),
-
-                    if (deposite != null && deposite != 0)
-                      pw.Container(
-                        width: double.infinity,
-                        color: royalLight,
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        margin: const pw.EdgeInsets.only(bottom: 2),
-                        child: pw.Text(
-                          totalPaymentDisplay,
-                          textAlign: pw.TextAlign.right,
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, font: fontBold, fontSize: 9),
-                        ),
-                      ),
-
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
           pw.SizedBox(height: 15),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

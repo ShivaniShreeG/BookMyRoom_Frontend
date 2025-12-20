@@ -379,7 +379,6 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
     Widget? child,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -446,7 +445,6 @@ class _AddFacilitatorPageState extends State<AddFacilitatorPage> {
       ),
     );
   }
-
 
   Future<void> _fetchHallDetails(int lodgeId) async {
     try {

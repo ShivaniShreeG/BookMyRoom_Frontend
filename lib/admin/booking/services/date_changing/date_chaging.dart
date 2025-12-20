@@ -859,12 +859,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   }
 
   Widget _paymentInfoSection(Map<String, dynamic> b) {
-    bool hasValue(dynamic val) =>
-        val != null && val
-            .toString()
-            .trim()
-            .isNotEmpty;
-    bool isPaid = !hasValue(b["Balance"]) || b["Balance"].toString() == "0";
 
     return Stack(
       clipBehavior: Clip.none,
@@ -896,16 +890,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               const SizedBox(height: 10),
 
               _paymentRow("Total Amount", "₹${b["amount"]}"),
-              const SizedBox(height: 10),
-
-              _paymentRow(
-                isPaid ? "Paid" : "Advance",
-                "₹${b["advance"]}",
-              ),
-              const SizedBox(height: 10),
-
-              if (!isPaid && hasValue(b["Balance"]))
-                _paymentRow("Balance", "₹${b["Balance"]}"),
               const SizedBox(height: 10),
               _paymentRow("Booked At", formatDate(b['created_at']))
             ],

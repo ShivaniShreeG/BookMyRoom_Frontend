@@ -197,7 +197,7 @@ class _MonthlyReportPageState extends State<MonthlyReportPage> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: Colors.white,
+                  foregroundColor: royal,
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                   textStyle: const TextStyle(fontWeight: FontWeight.bold),
                 ),

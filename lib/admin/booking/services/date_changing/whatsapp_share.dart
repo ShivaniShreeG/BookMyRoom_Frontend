@@ -69,6 +69,7 @@ class UpdatedBookingSummaryPage extends StatelessWidget {
     buffer.writeln("   Updated Booking Confirmation");
     buffer.writeln("---------------------------");
     buffer.writeln("This is your official booking confirmation message from ${hallDetails['name']},${hallDetails['address']}");
+    buffer.writeln("📱 ${hallDetails['phone']}");
     buffer.writeln("");
 
     buffer.writeln("Booking ID  : ${newBooking['booking_id']}");

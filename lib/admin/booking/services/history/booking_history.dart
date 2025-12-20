@@ -24,10 +24,12 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
   List<Map<String, dynamic>> _filteredBookings = [];
   final TextEditingController _searchController = TextEditingController();
   Map<String, dynamic>? hallDetails;
+  DateTime? _selectedMonth;
 
   @override
   void initState() {
     super.initState();
+    _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
     _loadBookings();
     _searchController.addListener(_onSearchChanged);
     _fetchHallDetails();
@@ -63,12 +65,30 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
           _bookings = List<Map<String, dynamic>>.from(bookings);
           _filteredBookings = _bookings;
         });
+        _applyFilters();
       }
     } catch (e) {
       _showMessage("❌ Error: $e");
     } finally {
       setState(() => _isFetching = false);
     }
+  }
+
+  void _applyFilters() {
+    if (_selectedMonth == null) {
+      setState(() => _filteredBookings = _bookings);
+      return;
+    }
+
+    final month = _selectedMonth!.month;
+    final year = _selectedMonth!.year;
+
+    setState(() {
+      _filteredBookings = _bookings.where((b) {
+        final checkIn = DateTime.parse(b["check_in"]);
+        return checkIn.month == month && checkIn.year == year;
+      }).toList();
+    });
   }
 
   String formatDateTime(String dateTimeString) {
@@ -78,6 +98,107 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
     } catch (e) {
       return dateTimeString;
     }
+  }
+
+  Future<void> _pickMonthYear() async {
+    int selectedYear = _selectedMonth?.year ?? DateTime.now().year;
+    int selectedMonth = _selectedMonth?.month ?? DateTime.now().month;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setInnerState) {
+            return AlertDialog(
+              title: const Text("Select Month & Year"),
+              titleTextStyle: TextStyle(color: royal,fontSize: 25),
+              content: SizedBox(
+                height: 260,
+                child: Column(
+                  children: [
+                    // Year selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          color: royal,
+                          onPressed: () {
+                            setInnerState(() => selectedYear--); // FIX ✔
+                          },
+                        ),
+                        Text(
+                          "$selectedYear",
+                          style: const TextStyle(fontSize: 20,color: royal),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          color: royal,
+                          onPressed: () {
+                            setInnerState(() => selectedYear++); // FIX ✔
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Month grid
+                    Expanded(
+                      child: GridView.count(
+                        crossAxisCount: 3,
+                        children: List.generate(12, (i) {
+                          final monthNum = i + 1;
+                          final monthName = DateFormat('MMMM')
+                              .format(DateTime(2024, monthNum));
+
+                          final isSelected =
+                              monthNum == selectedMonth &&
+                                  selectedYear == (_selectedMonth?.year ?? -1);
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                              setState(() {
+                                _selectedMonth =
+                                    DateTime(selectedYear, monthNum);
+                              });
+                              _applyFilters();
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? royal
+                                    : royalLight.withAlpha(40),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  monthName.substring(0, 3),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : royal,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _fetchHallDetails() async {
@@ -380,6 +501,30 @@ class _BookingHistoryPageState extends State<BookingsHistoryPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pickMonthYear,
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(
+                      _selectedMonth == null
+                          ? "Filter by Month"
+                          : DateFormat("MMMM yyyy").format(_selectedMonth!),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: royal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 

@@ -36,7 +36,7 @@ class _CancelDetailsPageState extends State<CancelDetailsPage> {
     super.initState();
     _fetchHallDetails();
     _fetchCancelInfo();
-    _reasonPercentageController.text = "Nill";
+    _reasonPercentageController.text = "Nil";
 
   }
 

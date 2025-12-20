@@ -338,9 +338,10 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
     final totalBase = pricingData?["total_base"] ?? 0.0;
     final gstAmount = pricingData?["gst"] ?? 0.0;
     final grandTotal = pricingData?["grand_total"] ?? 0.0;
-    final advance = double.tryParse(advanceController.text) ?? 0.0;
+    final advance = grandTotal; // send full amount
     final deposit = double.tryParse(depositController.text) ?? 0.0;
-    final balance = grandTotal - advance;
+    final balance = 0.0; // always zero
+
 
     final roomsPayload = (pricingData?["groups"] as List<dynamic>? ?? []).map((group) {
       return {
@@ -550,20 +551,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
               const SizedBox(height: 10),
               _labelValueRowStyled("GST ${pricingData!["gst_rate"]}%", pricingData!["gst"].toString(), labelWidth),
               const SizedBox(height: 10),
-              _labelValueRowStyled("Grand Total", pricingData!["grand_total"].toString(), labelWidth, bold: true),
-              const SizedBox(height: 10),
-              _editableRow(
-                "Advance",
-                labelWidth,
-                    (val) {
-                  final advance = double.tryParse(val) ?? 0;
-                  final grandTotal = pricingData!["grand_total"] ?? 0;
-                  setState(() {
-                    balanceController.text = (grandTotal - advance).toStringAsFixed(2);
-                  });
-                },
-                controller: advanceController,
-              ),
+              _labelValueRowStyled("Total Amount", pricingData!["grand_total"].toString(), labelWidth, bold: true),
               const SizedBox(height: 10),
               _editableRow(
                 "Deposit",
@@ -572,8 +560,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                 },
                 controller: depositController,
               ),
-              const SizedBox(height: 10),
-              _labelValueRowStyled("Balance", balanceController.text, labelWidth, bold: true),
               const SizedBox(height: 10),
             ],
           ),
@@ -891,6 +877,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
       buffer.writeln("---------------------------");
       buffer.writeln("This is your official booking confirmation"
           " message from ${hallDetails?['name']},${hallDetails?['address']}");
+      buffer.writeln("📱 ${hallDetails?['phone']}");
       buffer.writeln("");
 
       buffer.writeln("Booking ID  : ${booking['booking_id']}");
@@ -907,7 +894,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
         buffer.writeln("Alt Phone : ${alternatePhones.join(', ')}");
       }
 
-      if (booking['email'] != null) {
+      if (booking['email'] != null && booking['email'].toString().trim().isNotEmpty){
         buffer.writeln("Email     : ${booking['email']}");
       }
 
@@ -948,19 +935,17 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
       buffer.writeln("Base Amount     : ${booking['baseamount']}");
       buffer.writeln("GST             : ${booking['gst']}");
       buffer.writeln("Total Amount    : ${booking['amount']}");
-      buffer.writeln("Advance Paid    : ${booking['advance']}");
-      buffer.writeln("Deposit Paid    : ${booking['deposite']}");
-
+      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
+      if (dep > 0) {
+        buffer.writeln("Deposit Paid    : ${booking['deposite']}");
+      }
 
       double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
-      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
       double totalPaid = adv + dep;
 
       if (dep > 0) {
         buffer.writeln("Total Paid      : $totalPaid");
       }
-
-      buffer.writeln("Balance         : ${booking['Balance'] ?? 0}");
       buffer.writeln("");
 
       buffer.writeln("---------------------------");
@@ -1021,7 +1006,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                         buildLabelValueBooking("Address", booking['address']),
                       if (alternatePhones.isNotEmpty)
                         buildLabelValueBooking("Alt Phone", alternatePhones.join(', ')),
-                      if (booking['email'] != null)
+                      if (booking['email'] != null && booking['email'].toString().trim().isNotEmpty)
                         buildLabelValueBooking("Email", booking['email']),
                     ],
                   ),
@@ -1092,17 +1077,15 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                       buildLabelValueBooking("GST", booking['gst'].toString()),
                     if (booking['amount'] != null)
                       buildLabelValueBooking("Total Amount", booking['amount'].toString()),
-                    if (booking['advance'] != null)
-                      buildLabelValueBooking("Advance", booking['advance'].toString()),
-                    if (booking['deposite'] != null)
+                    if (booking['deposite'] != null && booking['deposite'].toString().trim() != "0" &&
+                        booking['deposite'].toString().trim() != "0.0")
                       buildLabelValueBooking("Deposite", booking['deposite'].toString()),
-                    if (booking['deposite'] != null)
+                    if (booking['deposite'] != null && booking['deposite'].toString().trim() != "0" &&
+                        booking['deposite'].toString().trim() != "0.0")
                       buildLabelValueBooking("Total Paid",  (
                           (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
                               (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
                       ).toString() ),
-                    if (booking['Balance'] != null)
-                      buildLabelValueBooking("Balance", booking['Balance'].toString()),
                   ],
                 ),
 
@@ -1239,7 +1222,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                         Expanded(
                           flex: 2,
                           child: Text(
-                            "Guest ${index + 1} Aadhaar",
+                            "Guest ${index + 1} ID Proof",
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, color: royal),
                           ),
@@ -1250,11 +1233,11 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                           child: TextFormField(
                             controller: aadhaarControllers[index],
                             keyboardType: TextInputType.visiblePassword,
-                            maxLength: 12,
+                            maxLength: 20,
                             style: const TextStyle(color: royal),
                             cursorColor: royal,
                             decoration: InputDecoration(
-                              hintText: "Enter 12-digit Aadhaar",
+                              hintText: "Enter the ID Proof number",
                               hintStyle: TextStyle(color: royal),
                               counterText: "",
                               filled: true,
@@ -1273,10 +1256,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return "Aadhaar required";
-                              }
-                              if (value.length != 12) {
-                                return "Must be 12 digits";
+                                return "ID Proof required";
                               }
                               return null;
                             },

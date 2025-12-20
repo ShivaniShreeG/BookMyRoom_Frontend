@@ -101,8 +101,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final size = MediaQuery.of(context).size;
     final double screenWidth = size.width;
     final double screenHeight = size.height;
-    final double textScale = screenWidth / 375;
-    final double boxScale = screenHeight / 812;
+    double textScale = (screenWidth / 390).clamp(0.8, 1.4);
+    double boxScale  = (screenHeight / 840).clamp(0.8, 1.4);
 
     return Scaffold(
       backgroundColor: royalLight.withValues(alpha: 0.2),
@@ -117,13 +117,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             if (selectedHall != null)
               Align(
                 alignment: Alignment.center,
-                child: _buildHallCard(selectedHall!, textScale, boxScale),
+                child: _buildHallCard(selectedHall!, textScale, boxScale,screenWidth),
               ),
             SizedBox(height: 20 * boxScale),
             Align(
               alignment: Alignment.center,
               child: _buildBookingServiceCard(
-                  screenWidth, textScale, boxScale),
+                  screenWidth),
 
             ),
             SizedBox(height: 20 * boxScale),
@@ -140,7 +140,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildHallCard(
-      Map<String, dynamic> hall, double textScale, double boxScale) {
+      Map<String, dynamic> hall,
+      double textScale,
+      double boxScale,
+      double screenWidth,
+      ) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -157,14 +161,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 40 * boxScale,
+              radius: (screenWidth > 900 ? 40 : 40) * boxScale,
               backgroundColor: royalLight,
               backgroundImage: hall['logo'] != null
                   ? MemoryImage(base64Decode(hall['logo']))
                   : null,
               child: hall['logo'] == null
-                  ? Icon(Icons.home_work,
-                  size: 35 * boxScale, color: royal)
+                  ? Icon(Icons.home_work_rounded,
+                  size: (screenWidth > 900 ? 40 : 40) * boxScale,
+                  color: royal)
                   : null,
             ),
             SizedBox(width: 16 * boxScale),
@@ -309,6 +314,193 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Widget _buildBookingServiceCard(double screenWidth) {
+    final double buttonSize = 70.0;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: royal, width: 1.5),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text(
+                  "Booking Service",
+                  style: TextStyle(
+                    color: royal,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, color: royal, size: 40),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _buildManageButton(
+                  icon: Icons.event_available,
+                  label: "Room Booking",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => SelectRoomByCalendarPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.check_circle,
+                  label: "Check In",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => PreBookedListPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.change_circle_outlined,
+                  label: "Date Changing",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => DateChangingPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.cancel,
+                  label: "Cancel Booking",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CancelBookedPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.add_box,
+                  label: "Add Charges",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => AddChargesPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.receipt_long,
+                  label: "Check Out",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => BookingsListPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.search,
+                  label: "Date Availability",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => AvailabilityCalendarPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.work_history_outlined,
+                  label: "Upcoming Booking",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => UpcomingBookingsPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.history,
+                  label: "Booking History",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => BookingsHistoryPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.free_cancellation,
+                  label: "Cancellation History",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CancelHistoryPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+                _buildManageButton(
+                  icon: Icons.domain_add,
+                  label: "Facilitators",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ViewFacilitatorPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildManageButton({
     required IconData icon,
     required String label,
@@ -355,243 +547,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 color: royal,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBookingServiceCard(
-      double screenWidth, double textScale, double boxScale) {
-    final double buttonWidth =
-    screenWidth < 400 ? 75 * boxScale : 90 * boxScale;
-    final List<Map<String, dynamic>> actions = [
-      {
-        "icon": Icons.event_available,
-        "label": "Room Booking",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SelectRoomByCalendarPage(),
-            ),
-          );
-        }
-      },
-      {
-        "icon": Icons.check_circle,
-        "label": "Check In",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PreBookedListPage(),
-            ),
-          );
-        }
-      },
-      {
-        "icon": Icons.change_circle_outlined,
-        "label": "Date Changing",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => DateChangingPage()),
-          );
-        }
-      },
-      {
-        "icon": Icons.cancel,
-        "label": "Cancel Booking",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CancelBookedPage(),
-            ),
-          );
-        }
-      },
-      {
-        "icon": Icons.add_box,
-        "label": "Add Charges",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddChargesPage(),
-            ),
-          );
-        }
-      },
-      {
-        "icon": Icons.receipt_long,
-        "label": "Billing",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingsListPage(),
-            ),
-          );
-        }
-      },
-      {
-        "icon": Icons.search,
-        "label": "Date Availability",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AvailabilityCalendarPage()),
-          );
-        }
-      },
-      {
-        "icon": Icons.work_history_outlined,
-        "label": "Upcoming Booking",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => UpcomingBookingsPage()),
-          );
-        }
-      },
-      {
-        "icon": Icons.history,
-        "label": "Booking History",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => BookingsHistoryPage()),
-          );
-        }
-      },
-      {
-        "icon": Icons.free_cancellation,
-        "label": "Cancellation History",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => CancelHistoryPage()),
-          );
-        }
-      },
-      {
-        "icon": Icons.domain_add,
-        "label": "Facilitators",
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ViewFacilitatorPage()),
-          );
-        }
-      },
-    ];
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20 * boxScale),
-        side: const BorderSide(color: royal, width: 1.5),
-      ),
-      elevation: 0,
-      color: Colors.white,
-      child: Padding(
-        padding: EdgeInsets.all(16 * boxScale),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Booking Service",
-                  style: TextStyle(
-                    color: royal,
-                    fontSize: 20 * textScale,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {},
-                  child: Icon(Icons.arrow_drop_down,
-                      color: royal, size: 36 * boxScale),
-                ),
-              ],
-            ),
-            SizedBox(height: 20 * boxScale),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 20 * textScale,
-              runSpacing: 20 * boxScale,
-              children: actions
-                  .map((item) => _buildActionButton(
-                icon: item['icon'],
-                label: item['label'],
-                onTap: item['onTap'],
-                width: buttonWidth,
-                textScale: textScale,
-                boxScale: boxScale,
-              ))
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required double width,
-    required double textScale,
-    required double boxScale,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: width,
-            height: width,
-            decoration: BoxDecoration(
-              color: royalLight.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(18 * boxScale),
-              boxShadow: [
-                BoxShadow(
-                  color: royal.withValues(alpha:0.3),
-                  blurRadius: 5 * boxScale,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
-                color: royal,
-                width: 1.5 * boxScale,
-              ),
-            ),
-            child: Center(
-              child: Icon(icon,
-                  size: 32 * textScale, color:Colors.white),
-            ),
-          ),
-        ),
-        SizedBox(height: 6 * boxScale),
-        SizedBox(
-          width: width,
-          height: 36 * boxScale,
-          child: Center(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: royal,
-                fontWeight: FontWeight.bold,
-                fontSize: 13 * textScale,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

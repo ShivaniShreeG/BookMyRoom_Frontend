@@ -40,7 +40,9 @@ class _PreBookedListPageState extends State<PreBookedListPage> {
     if (lodgeId == null) return;
 
     try {
-      final url = Uri.parse("$baseUrl/booking/prebooked/$lodgeId");
+      final now = DateTime.now().toIso8601String();
+
+      final url = Uri.parse("$baseUrl/booking/prebooked/$lodgeId?now=$now");
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -390,6 +392,7 @@ class _PreBookedListPageState extends State<PreBookedListPage> {
                   style: TextStyle(color: royal, fontSize: 16),
                 ),
               )
+
                   : ListView(
                 children: _filteredBookings
                     .map(_buildBookingCard)
@@ -401,4 +404,5 @@ class _PreBookedListPageState extends State<PreBookedListPage> {
       ),
     );
   }
+
 }

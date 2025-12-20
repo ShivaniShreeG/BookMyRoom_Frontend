@@ -94,6 +94,11 @@ class _OwnerPageState extends State<OwnerPage> {
   }
 
   Widget _buildHallCard() {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive scale: phones → small, tablets/desktops → bigger
+    double textScale = (screenWidth / 390).clamp(0.8, 1.4);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -110,41 +115,47 @@ class _OwnerPageState extends State<OwnerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 40,
+              radius: 25 * textScale,
               backgroundColor: royalLight,
               backgroundImage: (lodgeLogo != null && lodgeLogo!.isNotEmpty)
                   ? MemoryImage(base64Decode(lodgeLogo!))
                   : null,
               child: (lodgeLogo == null || lodgeLogo!.isEmpty)
-                  ? const Icon(Icons.home_work_rounded, size: 35, color: royal)
+                  ? Icon(
+                Icons.home_work_rounded,
+                size: 25 * textScale,
+                color: royal,
+              )
                   : null,
             ),
-            const SizedBox(width: 16),
+
+            SizedBox(width: 16 * textScale),
+
             Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     lodgeName ?? "Unknown Lodge",
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 18 * textScale,   // ⬅ Responsive Title
                       fontWeight: FontWeight.bold,
                       color: royal,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    softWrap: true,
                   ),
-                  const SizedBox(height: 4),
+
+                  SizedBox(height: 4 * textScale),
+
                   Text(
                     lodgeAddress ?? "No address available",
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: TextStyle(
+                      fontSize: 14 * textScale,   // ⬅ Responsive Address
                       color: royal,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    softWrap: true,
                   ),
                 ],
               ),

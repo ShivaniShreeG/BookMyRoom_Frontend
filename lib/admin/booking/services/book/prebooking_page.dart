@@ -334,22 +334,7 @@ class _PreBookingPageState extends State<PreBookingPage> {
               const SizedBox(height: 10),
               _labelValueRowStyled("GST ${pricingData!["gst_rate"]}%", pricingData!["gst"].toString(), labelWidth),
               const SizedBox(height: 10),
-              _labelValueRowStyled("Grand Total", pricingData!["grand_total"].toString(), labelWidth, bold: true),
-              const SizedBox(height: 10),
-              _editableRow(
-                "Advance",
-                labelWidth,
-                    (val) {
-                  final advance = double.tryParse(val) ?? 0;
-                  final grandTotal = pricingData!["grand_total"] ?? 0;
-                  setState(() {
-                    balanceController.text = (grandTotal - advance).toStringAsFixed(2);
-                  });
-                },
-                controller: advanceController,
-              ),
-              const SizedBox(height: 10),
-              _labelValueRowStyled("Balance", balanceController.text, labelWidth, bold: true),
+              _labelValueRowStyled("Total Amount", pricingData!["grand_total"].toString(), labelWidth, bold: true),
               const SizedBox(height: 10),
             ],
           ),
@@ -723,6 +708,11 @@ class _PreBookingPageState extends State<PreBookingPage> {
                       keyboardType: TextInputType.number,
                       cursorColor: royal,
                       style: TextStyle(color: royal),
+                      onChanged: (value) {
+                        setState(() {
+                          numGuests = int.tryParse(value) ?? 1;
+                        });
+                      },
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -738,8 +728,7 @@ class _PreBookingPageState extends State<PreBookingPage> {
                         filled: true,
                         fillColor: royal.withValues(alpha: 0.05),
                         isDense: true,
-                        contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       ),
                     ),
                   ),
@@ -803,8 +792,9 @@ class _PreBookingPageState extends State<PreBookingPage> {
     final totalBase = pricingData?["total_base"] ?? 0.0;
     final gstAmount = pricingData?["gst"] ?? 0.0;
     final grandTotal = pricingData?["grand_total"] ?? 0.0;
-    final advance = double.tryParse(advanceController.text) ?? 0.0;
-    final balance = grandTotal - advance;
+    final advance = grandTotal;
+    final balance = 0.0;
+
 
     final roomsPayload = (pricingData?["groups"] as List<dynamic>? ?? []).map((group) {
       return {
@@ -847,7 +837,6 @@ class _PreBookingPageState extends State<PreBookingPage> {
           "payment_method": selectedPaymentMethod!,
         }),
       );
-
       setState(() => submitting = false);
 
       dynamic responseJson;
@@ -1260,6 +1249,7 @@ class _PreBookingPageState extends State<PreBookingPage> {
       buffer.writeln("---------------------------");
       buffer.writeln("This is your official booking confirmation"
           " message from ${hallDetails?['name']},${hallDetails?['address']}");
+      buffer.writeln("📱 ${hallDetails?['phone']}");
       buffer.writeln("");
 
       buffer.writeln("Booking ID  : ${booking['booking_id']}");
@@ -1276,7 +1266,7 @@ class _PreBookingPageState extends State<PreBookingPage> {
         buffer.writeln("Alt Phone : ${alternatePhones.join(', ')}");
       }
 
-      if (booking['email'] != null) {
+      if (booking['email'] != null && booking['email'].toString().trim().isNotEmpty){
         buffer.writeln("Email     : ${booking['email']}");
       }
 
@@ -1317,9 +1307,6 @@ class _PreBookingPageState extends State<PreBookingPage> {
       buffer.writeln("Base Amount     : ${booking['baseamount']}");
       buffer.writeln("GST             : ${booking['gst']}");
       buffer.writeln("Total Amount    : ${booking['amount']}");
-      buffer.writeln("Advance Paid    : ${booking['advance']}");
-
-      buffer.writeln("Balance         : ${booking['Balance'] ?? 0}");
       buffer.writeln("");
 
       buffer.writeln("---------------------------");
@@ -1380,7 +1367,7 @@ class _PreBookingPageState extends State<PreBookingPage> {
                         buildLabelValueBooking("Address", booking['address']),
                       if (alternatePhones.isNotEmpty)
                         buildLabelValueBooking("Alt Phone", alternatePhones.join(', ')),
-                      if (booking['email'] != null)
+                      if (booking['email'] != null && booking['email'].toString().trim().isNotEmpty)
                         buildLabelValueBooking("Email", booking['email']),
                     ],
                   ),
@@ -1447,10 +1434,6 @@ class _PreBookingPageState extends State<PreBookingPage> {
                       buildLabelValueBooking("GST", booking['gst'].toString()),
                     if (booking['amount'] != null)
                       buildLabelValueBooking("Total Amount", booking['amount'].toString()),
-                    if (booking['advance'] != null)
-                      buildLabelValueBooking("Advance", booking['advance'].toString()),
-                    if (booking['Balance'] != null)
-                      buildLabelValueBooking("Balance", booking['Balance'].toString()),
                   ],
                 ),
 

@@ -93,7 +93,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchRoomStats(int lodgeId) async {
     try {
-      final url = Uri.parse('$baseUrl/home/availability/7days/$lodgeId');
+      final now = DateTime.now().toIso8601String();
+
+      final url = Uri.parse(
+          '$baseUrl/home/availability/7days/$lodgeId?time=$now'
+      );
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -136,40 +140,222 @@ class _HomePageState extends State<HomePage> {
     final size = MediaQuery.of(context).size;
     final double screenWidth = size.width;
     final double screenHeight = size.height;
-    final double textScale = screenWidth / 375;
-    final double boxScale = screenHeight / 812;
+    double textScale = (screenWidth / 390).clamp(0.8, 1.4);
+    double boxScale  = (screenHeight / 840).clamp(0.8, 1.4);
+
 
     return Scaffold(
-        backgroundColor: royalLight.withValues(alpha: 0.2),
-        body: Container(
-            child:_isLoading
-                ? const Center(
-              child: CircularProgressIndicator(color: royal),
-            )
-                : SingleChildScrollView(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    if (selectedHall != null)
-                      Align(
-                        alignment: Alignment.center,
-                        child: _buildHallCard(selectedHall!, textScale, boxScale),
-                      ),
-                    if (roomStats.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(top: 20 * textScale),
-                        child: _buildRoomAvailabilityBox(roomStats, textScale, boxScale),
-                      ),
+      backgroundColor: royalLight.withValues(alpha: 0.2),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100), // Desktop width
+          child: _isLoading
+              ? const Center(
+            child: CircularProgressIndicator(color: royal),
+          )
+              : SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  if (selectedHall != null)
+                    Align(
+                      alignment: Alignment.center,
+                      child: _buildHallCard(selectedHall!, textScale, boxScale, screenWidth),
+                    ),
+
+                  if (roomStats.isNotEmpty)
                     Padding(
                       padding: EdgeInsets.only(top: 20 * textScale),
-                      child: _buildCurrentBalanceBox(currentBalance, textScale, boxScale),
+                      child: _buildRoomAvailabilityBox(roomStats, textScale, boxScale),
                     ),
+
+                  Padding(
+                    padding: EdgeInsets.only(top: 20 * textScale),
+                    child: _buildCurrentBalanceBox(currentBalance, textScale, boxScale),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildRoomTypeCards(
+      List<dynamic> stats, double textScale, double boxScale) {
+
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Auto width based on screen size
+    final double nameColumnWidth =
+    screenWidth > 900 ? 200 : screenWidth > 600 ? 150 : 120;
+
+    final double dayColumnWidth =
+    screenWidth > 900 ? 90 : screenWidth > 600 ? 70 : 55;
+
+    Map<String, Map<String, dynamic>> roomMap = {};
+
+    for (var dayEntry in stats) {
+      final String date = dayEntry["date"];
+      final List availability = dayEntry["availability"] ?? [];
+
+      for (var room in availability) {
+        final String type = room["room_type"] ?? "";
+        final String name = room["room_name"] ?? "";
+        final int total = (room["total_rooms"] ?? 0).toInt();
+        final int availableCount =
+            (room["available_rooms"] as List?)?.length ?? 0;
+
+        roomMap.putIfAbsent(type, () => {});
+        roomMap[type]!.putIfAbsent(name, () {
+          return {
+            "room_type": type,
+            "room_name": name,
+            "total_count": total,
+            "days": []
+          };
+        });
+
+        roomMap[type]![name]["days"].add({
+          "date": date,
+          "available_count": availableCount
+        });
+      }
+    }
+
+    List<Map<String, dynamic>> flattened = [];
+    roomMap.forEach((type, rooms) => rooms.forEach(
+            (name, info) => flattened.add(info)));
+
+    Map<String, List<dynamic>> grouped = {};
+    for (var r in flattened) {
+      grouped.putIfAbsent(r["room_type"], () => []);
+      grouped[r["room_type"]]!.add(r);
+    }
+
+    return Column(
+      children: grouped.entries.map((entry) {
+        final type = entry.key;
+        final rooms = entry.value;
+        final days = rooms.first["days"] as List;
+
+        final int totalCount = rooms.fold<int>(0, (sum, r) {
+          final value = r["total_count"];
+
+          if (value is int) return sum + value;
+          if (value is double) return sum + value.toInt();
+
+          return sum;
+        });
+
+
+        return Container(
+          margin: EdgeInsets.only(bottom: 20 * boxScale),
+          padding: EdgeInsets.all(16 * boxScale),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20 * boxScale),
+            border: Border.all(color: royal, width: 1.4),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  "$type Rooms ($totalCount)",
+                  style: TextStyle(
+                    fontSize: 18 * textScale,
+                    fontWeight: FontWeight.bold,
+                    color: royal,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16 * boxScale),
+
+              // Responsive horizontal scroll
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Table(
+                  border: TableBorder.all(color: royal, width: 1.2),
+                  columnWidths: {
+                    0: FixedColumnWidth(nameColumnWidth),
+                    for (int i = 1; i <= days.length; i++)
+                      i: FixedColumnWidth(dayColumnWidth),
+                  },
+                  children: [
+                    // HEADER ROW
+                    TableRow(
+                      decoration: BoxDecoration(
+                          color: royalLight.withValues(alpha: 0.2)),
+                      children: [
+                        _headerCell("Room Name", textScale, boxScale),
+                        ...days.map((d) {
+                          final parsed = DateTime.tryParse(d["date"]);
+                          final label = parsed != null
+                              ? "${parsed.day}-${parsed.month}"
+                              : "--";
+                          return _headerCell(label, textScale, boxScale);
+                        })
+                      ],
+                    ),
+
+                    // BODY ROWS
+                    ...rooms.map((room) {
+                      return TableRow(
+                        children: [
+                          _bodyCell(
+                              "${room["room_name"]} (${room["total_count"]})",
+                              textScale,
+                              boxScale),
+                          ...room["days"].map((d) {
+                            return _bodyCell(
+                              d["available_count"].toString(),
+                              textScale,
+                              boxScale,
+                            );
+                          }).toList()
+                        ],
+                      );
+                    })
                   ],
                 ),
               ),
-            )
-        )
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _headerCell(String text, double ts, double bs) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 12 * bs),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14 * ts,
+          color: royal,
+        ),
+      ),
+    );
+  }
+
+  Widget _bodyCell(String text, double ts, double bs) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 12 * bs),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14 * ts,
+          color: royal,
+        ),
+      ),
     );
   }
 
@@ -182,6 +368,7 @@ class _HomePageState extends State<HomePage> {
       Map<String, dynamic> hall,
       double textScale,
       double boxScale,
+      double screenWidth,
       ) {
     return Card(
       elevation: 0,
@@ -199,14 +386,15 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              radius: 40 * boxScale,
+              radius: (screenWidth > 900 ? 40 : 40) * boxScale,
               backgroundColor: royalLight,
               backgroundImage: hall['logo'] != null
                   ? MemoryImage(base64Decode(hall['logo']))
                   : null,
               child: hall['logo'] == null
                   ? Icon(Icons.home_work_rounded,
-                  size: 35 * boxScale, color: royal)
+                  size: (screenWidth > 900 ? 40 : 40) * boxScale,
+                  color: royal)
                   : null,
             ),
             SizedBox(width: 16 * boxScale),
@@ -242,141 +430,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  Widget buildRoomTypeCards(List<dynamic> stats, double textScale, double boxScale) {
-    // Group rooms by room_type
-    Map<String, List<dynamic>> grouped = {};
-    for (var r in stats) {
-      String type = r['room_type'];
-      grouped.putIfAbsent(type, () => []);
-      grouped[type]!.add(r);
-    }
-
-    return Column(
-      children: grouped.entries.map((entry) {
-        final roomType = entry.key;
-        final rooms = entry.value;
-        final dates = rooms.first["days"];
-
-        // Calculate total rooms for this type
-        final int totalRoomCount = rooms.fold<int>(
-          0,
-              (sum, r) => sum + ((r["total_count"] ?? 0) as num).toInt(),
-        );
-
-        return Container(
-          margin: EdgeInsets.only(bottom: 20 * boxScale),
-          padding: EdgeInsets.all(16 * boxScale),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20 * boxScale),
-            border: Border.all(color: royal, width: 1.4),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title
-              Center(
-                child: Text(
-                  "$roomType Rooms ($totalRoomCount)",
-                  style: TextStyle(
-                    fontSize: 18 * textScale,
-                    fontWeight: FontWeight.bold,
-                    color: royal,
-                  ),
-                ),
-              ),
-              SizedBox(height: 16 * boxScale),
-
-              // Table inside Padding for spacing
-              Padding(
-                padding: EdgeInsets.only(top: 8.0 * boxScale),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Table(
-                    border: TableBorder.all(color: royal, width: 1.2),
-                    columnWidths: {
-                      0: FixedColumnWidth(120), // First column wider
-                      for (int i = 1; i <= dates.length; i++) i: FixedColumnWidth(60),
-                    },
-                    children: [
-                      // Table Header
-                      TableRow(
-                        decoration: BoxDecoration(color: royalLight.withValues(alpha: 0.2)),
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(vertical: 12 * boxScale),
-                            child: Center(
-                              child: Text(
-                                "Room Name",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14 * textScale,
-                                  color: royal,
-                                ),
-                              ),
-                            ),
-                          ),
-                          ...dates.map((d) => Container(
-                            padding: EdgeInsets.symmetric(vertical: 12 * boxScale),
-                            child: Center(
-                              child: Text(
-                                "${d["date"].substring(8)}-${d["date"].substring(5,7)}", // DD-MM
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13 * textScale,
-                                  color: royal,
-                                ),
-                              ),
-                            ),
-                          )),
-                        ],
-                      ),
-
-                      // Table Rows
-                      ...rooms.map((room) {
-                        return TableRow(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(vertical: 12 * boxScale),
-                              child: Center(
-                                child: Text(
-                                  "\t${room["room_name"]} (${room["total_count"]})",
-                                  style: TextStyle(
-                                    fontSize: 14 * textScale,
-                                    fontWeight: FontWeight.w500,
-                                    color: royal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            ...room["days"].map((d) => Container(
-                              padding: EdgeInsets.symmetric(vertical: 12 * boxScale),
-                              child: Center(
-                                child: Text(
-                                  d["available_count"].toString(),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15 * textScale,
-                                    color: royal,
-                                  ),
-                                ),
-                              ),
-                            )),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
 
   Widget _buildCurrentBalanceBox(double currentBalance, double textScale, double boxScale) {
     return Container(

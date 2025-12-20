@@ -7,7 +7,6 @@ import 'config.dart';
 import 'forgot_password.dart';
 import 'register.dart';
 
-/// 🎨 App Color Palette
 const Color royalblue = Color(0xFF376EA1);
 const Color royal = Color(0xFF19527A);
 const Color royalLight = Color(0xFF629AC1);
@@ -47,28 +46,46 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showMessage(String message) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
+    final double paddingScale = isTablet ? 1.4 : 1.0;
+    final double fontScale = isTablet ? 1.2 : 1.0;
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.transparent, // Let border container show
+        backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+        margin: EdgeInsets.symmetric(
+          horizontal: isTablet ? 40 : 16,
+          vertical: isTablet ? 20 : 12,
+        ),
+
         duration: const Duration(seconds: 3),
+
         content: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: royal, width: 2), // 💙 Royal blue border
+            borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+            border: Border.all(color: royal, width: isTablet ? 2.5 : 2),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+          padding: EdgeInsets.symmetric(
+            horizontal: 16 * paddingScale,
+            vertical: 12 * paddingScale,
+          ),
+
           child: Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               color: royal,
-              fontSize: 16,
+              fontSize: 16 * fontScale,
               fontWeight: FontWeight.w600,
             ),
+            textScaler: MediaQuery.textScalerOf(context),
           ),
         ),
       ),
@@ -153,217 +170,215 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final double screenWidth = size.width;
-    final double screenHeight = size.height;
-    final double textScale = screenWidth / 375;
-    final double boxScale = screenHeight / 812;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTablet = constraints.maxWidth > 600;
 
-    return Scaffold(
-      body: Container(
-        // 🌈 Gradient Background only
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [royalblue, royalLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: 24 * textScale,
-              vertical: 40 * boxScale,
+        final double maxCardWidth = isTablet ? 450 : constraints.maxWidth * 0.9;
+        final double verticalPadding = isTablet ? 32 : 20;
+
+        return Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [royalblue, royalLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title
-                Column(
-                  children: [
-                    Text(
-                      "LODGE",
-                      style: TextStyle(
-                        fontSize: 24 * textScale,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                        fontFamily: 'Good Times',
+            alignment: Alignment.center,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(vertical: verticalPadding),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxCardWidth),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // TITLE
+                      Text(
+                        "LODGE",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: isTablet ? 32 : 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                          fontFamily: 'Good Times',
+                        ),
                       ),
-                    ),
-                    Text(
-                      "MANAGEMENT",
-                      style: TextStyle(
-                        fontSize: 24 * textScale,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.1,
-                        fontFamily: 'Good Times',
+                      Text(
+                        "MANAGEMENT",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: isTablet ? 32 : 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.1,
+                          fontFamily: 'Good Times',
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20 * boxScale),
+                      const SizedBox(height: 20),
 
-                // Login Card (solid royal accents)
-                Container(
-                  padding: EdgeInsets.all(24 * boxScale),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20 * boxScale),
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        Icon(Icons.lock_outline,
-                            color: royal, size: 40 * boxScale),
-                        SizedBox(height: 12 * boxScale),
-                        Text(
-                          "Login",
-                          style: TextStyle(
-                            fontSize: 26 * textScale,
-                            fontWeight: FontWeight.bold,
-                            color: royal,
-                          ),
+                      // LOGIN CARD
+                      Container(
+                        padding: EdgeInsets.all(isTablet ? 32 : 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        SizedBox(height: 24 * boxScale),
-
-                        // 🏠 Lodge ID
-                        _buildTextField(
-                          controller: _lodgeIdController,
-                          icon: Icons.home_work_rounded,
-                          label: "Lodge ID",
-                          keyboard: TextInputType.number,
-                          validator: (v) {
-                            if (v != null &&
-                                v.isNotEmpty &&
-                                int.tryParse(v) == null) {
-                              return "Enter a valid Lodge ID";
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 16 * boxScale),
-
-                        // 👤 User ID
-                        _buildTextField(
-                          controller: _userIdController,
-                          icon: Icons.person,
-                          label: "User ID",
-                          keyboard: TextInputType.number,
-                          validator: (v) =>
-                          v == null || v.trim().isEmpty
-                              ? "User ID is required"
-                              : null,
-                        ),
-                        SizedBox(height: 16 * boxScale),
-
-                        // 🔒 Password
-                        _buildTextField(
-                          controller: _passwordController,
-                          icon: Icons.lock,
-                          label: "Password",
-                          obscure: _obscurePassword,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: royal,
-                            ),
-                            onPressed: () {
-                              setState(() =>
-                              _obscurePassword = !_obscurePassword);
-                            },
-                          ),
-                          validator: (v) =>
-                          v == null || v.trim().isEmpty
-                              ? "Password is required"
-                              : null,
-                        ),
-                        SizedBox(height: 16 * boxScale),
-
-                        // Solid royal Login button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50 * boxScale,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: royal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(12 * boxScale),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              Icon(Icons.lock_outline,
+                                  color: royal, size: isTablet ? 50 : 40),
+                              const SizedBox(height: 12),
+                              Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: isTablet ? 30 : 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: royal,
+                                ),
                               ),
-                            ),
-                            onPressed: _isLoading ? null : _login,
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                color: Colors.white)
-                                : Text(
-                              "Login",
-                              style: TextStyle(
-                                fontSize: 18 * textScale,
-                                fontWeight: FontWeight.w500,
+                              const SizedBox(height: 24),
+
+                              // Lodge ID
+                              _buildTextField(
+                                controller: _lodgeIdController,
+                                icon: Icons.home_work_rounded,
+                                label: "Lodge ID",
+                                keyboard: TextInputType.number,
+                                validator: (v) {
+                                  if (v != null &&
+                                      v.isNotEmpty &&
+                                      int.tryParse(v) == null) {
+                                    return "Enter a valid Lodge ID";
+                                  }
+                                  return null;
+                                },
                               ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 12 * boxScale),
+                              const SizedBox(height: 16),
 
-                        // Forgot Password
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const ForgotPasswordPage()),
-                            );
-                          },
-                          child: Text(
-                            "Forgot Password?",
-                            style: TextStyle(
-                                color: royal, fontSize: 14 * textScale),
-                          ),
-                        ),
+                              // User ID
+                              _buildTextField(
+                                controller: _userIdController,
+                                icon: Icons.person,
+                                label: "User ID",
+                                keyboard: TextInputType.number,
+                                validator: (v) => v == null || v.trim().isEmpty
+                                    ? "User ID is required"
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
 
-                        // Register
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                  const CreateHallOwnerPage()),
-                            );
-                          },
-                          child: Text(
-                            "Not registered yet? Register",
-                            style: TextStyle(
-                                color: royal, fontSize: 14 * textScale),
+                              // Password
+                              _buildTextField(
+                                controller: _passwordController,
+                                icon: Icons.lock,
+                                label: "Password",
+                                obscure: _obscurePassword,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: royal,
+                                  ),
+                                  onPressed: () {
+                                    setState(() =>
+                                    _obscurePassword = !_obscurePassword);
+                                  },
+                                ),
+                                validator: (v) => v == null || v.trim().isEmpty
+                                    ? "Password is required"
+                                    : null,
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Login Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: isTablet ? 55 : 48,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: royal,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  onPressed: _isLoading ? null : _login,
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                      color: Colors.white)
+                                      : Text(
+                                    "Login",
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 20 : 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                        const ForgotPasswordPage()),
+                                  );
+                                },
+                                child: Text(
+                                  "Forgot Password?",
+                                  style:
+                                  TextStyle(color: royal, fontSize: 14),
+                                ),
+                              ),
+
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                        const CreateHallOwnerPage()),
+                                  );
+                                },
+                                child: Text(
+                                  "Not registered yet? Register",
+                                  style:
+                                  TextStyle(color: royal, fontSize: 14),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+
+                      const SizedBox(height: 24),
+                      Text(
+                        "© ${DateTime.now().year} Ramchin Technologies Private Limited",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 24 * boxScale),
-
-                Text(
-                  "© ${DateTime.now().year} Ramchin Technologies Private Limited",
-                  style:
-                  TextStyle(color: Colors.white, fontSize: 12 * textScale),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // 🧩 Reusable text field builder
   Widget _buildTextField({
     required TextEditingController controller,
     required IconData icon,

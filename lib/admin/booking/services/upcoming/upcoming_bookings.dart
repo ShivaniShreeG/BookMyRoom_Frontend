@@ -25,6 +25,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
   final TextEditingController _searchController = TextEditingController();
   Map<String, dynamic>? hallDetails;
 
+
   @override
   void initState() {
     super.initState();
@@ -50,13 +51,9 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
 
         if (data is List) {
           bookings = data;
-        }
-
-        else if (data is Map && data["data"] is List) {
+        } else if (data is Map && data["data"] is List) {
           bookings = data["data"];
-        }
-
-        else if (data is Map && data["details"] is List) {
+        } else if (data is Map && data["details"] is List) {
           bookings = data["details"];
         }
 
@@ -64,6 +61,9 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
           _bookings = List<Map<String, dynamic>>.from(bookings);
           _filteredBookings = _bookings;
         });
+
+        // Apply default month filter (and search if any)
+        _applyFilters();
       }
     } catch (e) {
       debugPrint("❌ Error: $e");
@@ -103,7 +103,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
       SnackBar(
         content: Text(
           message,
-          style:  TextStyle(
+          style: TextStyle(
             color: royal,
             fontSize: 16,
           ),
@@ -112,8 +112,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: royal,width: 2)
-        ),
+            side: BorderSide(color: royal, width: 2)),
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         duration: const Duration(seconds: 3),
@@ -121,20 +120,63 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
     );
   }
 
-  void _onSearchChanged() {
-    final q = _searchController.text.toLowerCase();
+  // --- NEW: central filter application (combines search + month)
+// --- UPDATED: central filter application (search + upcoming check-ins) ---
+  void _applyFilters() {
+    final q = _searchController.text.trim().toLowerCase();
 
     setState(() {
       _filteredBookings = _bookings.where((b) {
-        final name = b["name"].toString().toLowerCase();
-        final phone = b["phone"].toString().toLowerCase();
-        final id = b["booking_id"].toString().toLowerCase();
+        // 1) Search match
+        bool searchMatch = true;
+        if (q.isNotEmpty) {
+          final name = b["name"]?.toString().toLowerCase() ?? "";
+          final phone = b["phone"]?.toString().toLowerCase() ?? "";
+          final id = b["booking_id"]?.toString().toLowerCase() ?? "";
+          final roomStr = (b["booked_room"] != null) ? b["booked_room"].toString().toLowerCase() : "";
+          searchMatch = name.contains(q) || phone.contains(q) || id.contains(q) || roomStr.contains(q);
+        }
+        if (!searchMatch) return false;
 
-        return name.contains(q) ||
-            phone.contains(q) ||
-            id.contains(q);
+        // 2) check_in should be today or upcoming
+        try {
+          final checkInStr = b["check_in"]?.toString();
+          if (checkInStr == null || checkInStr.isEmpty) return false;
+
+          final checkIn = DateTime.parse(checkInStr);
+
+          // Compare only the date portion (year, month, day)
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final checkInDate = DateTime(checkIn.year, checkIn.month, checkIn.day);
+
+          // Accept only if check-in date is today or later
+          if (checkInDate.isBefore(todayDate)) return false;
+        } catch (e) {
+          // If parse fails, exclude the booking
+          return false;
+        }
+
+        return true;
       }).toList();
+
+      // Optional: sort upcoming bookings by check_in ascending
+      _filteredBookings.sort((a, b) {
+        try {
+          final aStr = a["check_in"]?.toString() ?? "";
+          final bStr = b["check_in"]?.toString() ?? "";
+          final aDt = DateTime.parse(aStr);
+          final bDt = DateTime.parse(bStr);
+          return aDt.compareTo(bDt);
+        } catch (e) {
+          return 0;
+        }
+      });
     });
+  }
+
+  void _onSearchChanged() {
+    _applyFilters();
   }
 
   Widget _buildHallCard(Map<String, dynamic> hall) {
@@ -148,7 +190,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
         border: Border.all(color: royal, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: royal.withValues(alpha:0.15),
+            color: royal.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -222,61 +264,51 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
               children: [
                 Text(
                   "Booking #${b["booking_id"]}",
-                  style: TextStyle(
-                      color: royal, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(color: royal, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    b["status"],
+                    b["status"]?.toString() ?? "",
                     style: TextStyle(color: royal, fontWeight: FontWeight.w600),
                   ),
                 )
               ],
             ),
-
             const SizedBox(height: 8),
-
             Row(
               children: [
                 Icon(Icons.person, size: 18, color: royal),
                 const SizedBox(width: 6),
                 Text(
-                  b["name"],
+                  b["name"]?.toString() ?? "-",
                   style: TextStyle(color: royal, fontSize: 16),
                 ),
               ],
             ),
-
             const SizedBox(height: 6),
-
             Row(
               children: [
                 Icon(Icons.phone, size: 18, color: royal),
                 const SizedBox(width: 6),
                 Text(
-                  b["phone"].toString(),
+                  b["phone"]?.toString() ?? "-",
                   style: TextStyle(color: royal, fontSize: 15),
                 ),
               ],
             ),
-
             const SizedBox(height: 6),
-
             if (b["booked_room"] != null && (b["booked_room"] as List).isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: (b["booked_room"] as List<dynamic>).map<Widget>((room) {
                   final roomName = room[0] ?? "-";
                   final roomType = room[1] ?? "-";
-                  final roomNumbers = room[2] != null && (room[2] as List).isNotEmpty
-                      ? (room[2] as List).join(", ")
-                      : "-";
+                  final roomNumbers = room[2] != null && (room[2] as List).isNotEmpty ? (room[2] as List).join(", ") : "-";
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
@@ -301,20 +333,18 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
                 Icon(Icons.login, size: 18, color: royal),
                 const SizedBox(width: 6),
                 Text(
-                  "Check-In: ${formatDateTime(b["check_in"])}",
+                  "Check-In: ${formatDateTime(b["check_in"]?.toString() ?? '')}",
                   style: TextStyle(color: royal, fontSize: 15),
                 ),
               ],
             ),
-
             const SizedBox(height: 6),
-
             Row(
               children: [
                 Icon(Icons.logout, size: 18, color: royal),
                 const SizedBox(width: 6),
                 Text(
-                  "Check-Out: ${formatDateTime(b["check_out"])}",
+                  "Check-Out: ${formatDateTime(b["check_out"]?.toString() ?? '')}",
                   style: TextStyle(color: royal, fontSize: 15),
                 ),
               ],
@@ -324,8 +354,6 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -356,8 +384,9 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
             hallDetails == null
                 ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
                 : _buildHallCard(hallDetails!),
-
             const SizedBox(height: 16),
+
+            // Search field
             TextField(
               controller: _searchController,
               style: TextStyle(color: royal),
@@ -381,6 +410,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
 
             Expanded(
@@ -392,9 +422,7 @@ class _UpcomingBookingPageState extends State<UpcomingBookingsPage> {
                 ),
               )
                   : ListView(
-                children: _filteredBookings
-                    .map(_buildBookingCard)
-                    .toList(),
+                children: _filteredBookings.map(_buildBookingCard).toList(),
               ),
             ),
           ],

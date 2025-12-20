@@ -236,7 +236,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                         Expanded(
                           flex: 2,
                           child: Text(
-                            "Guest ${index + 1} Aadhaar",
+                            "Guest ${index + 1} ID Proof",
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, color: royal),
                           ),
@@ -247,11 +247,11 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                           child: TextFormField(
                             controller: aadhaarControllers[index],
                             keyboardType: TextInputType.number,
-                            maxLength: 12,
+                            maxLength: 20,
                             style: const TextStyle(color: royal),
                             cursorColor: royal,
                             decoration: InputDecoration(
-                              hintText: "Enter 12-digit Aadhaar",
+                              hintText: "Enter your ID Proof number",
                               hintStyle: TextStyle(color: royal),
                               counterText: "",
                               filled: true,
@@ -270,10 +270,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return "Aadhaar required";
-                              }
-                              if (value.length != 12) {
-                                return "Must be 12 digits";
+                                return "ID Proof required";
                               }
                               return null;
                             },
@@ -873,8 +870,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   }
 
   Widget _paymentInfoSection(Map<String, dynamic> b) {
-    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
-    bool isPaid = !hasValue(b["Balance"]) || b["Balance"].toString() == "0";
 
     return Stack(
       clipBehavior: Clip.none,
@@ -905,14 +900,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                 _paymentRow("Total Amount", "₹${b["amount"]}"),
                 const SizedBox(height: 10),
 
-              _paymentRow(
-                isPaid ? "Paid" : "Advance",
-                "₹${b["advance"]}",
-              ),
-              const SizedBox(height: 10),
-
-              if (!isPaid && hasValue(b["Balance"]))
-                _paymentRow("Balance", "₹${b["Balance"]}"),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -1062,6 +1049,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       buffer.writeln("---------------------------");
       buffer.writeln("This is your official Check-In confirmation"
           " message from ${hallDetails?['name']},${hallDetails?['address']}");
+      buffer.writeln("📱 ${hallDetails?['phone']}");
       buffer.writeln("");
 
       buffer.writeln("Booking ID  : ${booking['booking_id']}");
@@ -1119,19 +1107,17 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       buffer.writeln("Base Amount     : ${booking['baseamount']}");
       buffer.writeln("GST             : ${booking['gst']}");
       buffer.writeln("Total Amount    : ${booking['amount']}");
-      buffer.writeln("Advance Paid    : ${booking['advance']}");
-      buffer.writeln("Deposit Paid    : ${booking['deposite']}");
-
+      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
+      if (dep > 0) {
+        buffer.writeln("Deposit Paid    : ${booking['deposite']}");
+      }
 
       double adv = double.tryParse(booking['advance']?.toString() ?? "0") ?? 0;
-      double dep = double.tryParse(booking['deposite']?.toString() ?? "0") ?? 0;
       double totalPaid = adv + dep;
 
       if (dep > 0) {
         buffer.writeln("Total Paid      : $totalPaid");
       }
-
-      buffer.writeln("Balance         : ${booking['Balance'] ?? 0}");
       buffer.writeln("");
 
       buffer.writeln("---------------------------");
@@ -1192,7 +1178,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                         buildLabelValueBooking("Address", booking['address']),
                       if (alternatePhones.isNotEmpty)
                         buildLabelValueBooking("Alt Phone", alternatePhones.join(', ')),
-                      if (booking['email'] != null)
+                      if (booking['email'] != null && booking['email'].toString().trim().isNotEmpty)
                         buildLabelValueBooking("Email", booking['email']),
                     ],
                   ),
@@ -1263,17 +1249,15 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                       buildLabelValueBooking("GST", booking['gst'].toString()),
                     if (booking['amount'] != null)
                       buildLabelValueBooking("Total Amount", booking['amount'].toString()),
-                    if (booking['advance'] != null)
-                      buildLabelValueBooking("Advance", booking['advance'].toString()),
-                    if (booking['deposite'] != null)
+                    if (booking['deposite'] != null && booking['deposite'].toString().trim() != "0" &&
+                        booking['deposite'].toString().trim() != "0.0")
                       buildLabelValueBooking("Deposite", booking['deposite'].toString()),
-                    if (booking['deposite'] != null)
+                    if (booking['deposite'] != null &&booking['deposite'].toString().trim() != "0" &&
+                        booking['deposite'].toString().trim() != "0.0")
                       buildLabelValueBooking("Total Paid",  (
                           (booking['advance'] != null ? double.tryParse(booking['advance'].toString()) ?? 0 : 0) +
                               (booking['deposite'] != null ? double.tryParse(booking['deposite'].toString()) ?? 0 : 0)
                       ).toString() ),
-                    if (booking['Balance'] != null)
-                      buildLabelValueBooking("Balance", booking['Balance'].toString()),
                   ],
                 ),
 

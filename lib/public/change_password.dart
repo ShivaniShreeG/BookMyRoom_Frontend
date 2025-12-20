@@ -36,43 +36,51 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   void _showMessage(String message, {bool success = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        duration: const Duration(seconds: 3),
-        content: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: success ? Colors.green : royal, width: 2),
+    final w = MediaQuery.of(context).size.width;
+    final isTablet = w > 600;
+
+    final Color borderColor = success ? Colors.green : royal;
+    final IconData icon = success ? Icons.check_circle : Icons.error_outline;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.symmetric(
+            horizontal: isTablet ? 40 : 16,
+            vertical: isTablet ? 20 : 12,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                success ? Icons.check_circle : Icons.error_outline,
-                color: success ? Colors.green : royal,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(
-                    color: success ? Colors.green : royal,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          duration: const Duration(seconds: 3),
+          content: Container(
+            padding: EdgeInsets.all(isTablet ? 18 : 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+              border: Border.all(color: borderColor, width: isTablet ? 2.5 : 2),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: borderColor, size: isTablet ? 26 : 22),
+                SizedBox(width: isTablet ? 14 : 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    textScaler: MediaQuery.textScalerOf(context),
+                    style: TextStyle(
+                      color: borderColor,
+                      fontSize: isTablet ? 18 : 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _loadUserData() async {

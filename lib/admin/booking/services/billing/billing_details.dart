@@ -345,8 +345,6 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
   }
 
   Widget _paymentInfoSection(Map<String, dynamic> b) {
-    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
-    bool isPaid = !hasValue(b["Balance"]) || b["Balance"].toString() == "0";
 
     return Stack(
       clipBehavior: Clip.none,
@@ -376,16 +374,10 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
 
               _paymentRow("Total Amount", "₹${b["amount"]}"),
               const SizedBox(height: 10),
-
-              _paymentRow(
-                isPaid ? "Amount Paid" : "Advance",
-                "₹${b["advance"]}",
-              ),
-              const SizedBox(height: 10),
-
-              _paymentRow("Balance", "₹${b["Balance"]}"),
-              const SizedBox(height: 10),
-              _paymentRow("Deposite", "₹${b["deposite"]}")
+              if (b['deposite'] != null &&
+                  b['deposite'].toString().trim() != "0" &&
+                  b['deposite'].toString().trim() != "0.0")
+                _paymentRow("Deposite", "₹${b["deposite"]}")
             ],
           ),
         ),
@@ -503,6 +495,7 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
       final lodgeId = prefs.getInt('lodgeId');
       final userId = prefs.getString('userId');
       final bookingID = bookingId;
+      final currentTime = DateTime.now().toIso8601String();
 
       if (lodgeId == null || userId == null) {
         _showMessage("LodgeId or UserId not found");
@@ -527,12 +520,15 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
 
       double? balancePayment = chargesTotal - deposit;
       balancePayment = (balancePayment == 0) ? null : balancePayment;
-      final paymentMethod = await _selectPaymentMethod();
-      if (paymentMethod == null) {
-        _showMessage("Please select a payment method");
-        return;
+      if ((chargesTotal > 0) || (balancePayment != null && balancePayment != 0)) {
+        final paymentMethod = await _selectPaymentMethod();
+        if (paymentMethod == null) {
+          _showMessage("Please select a payment method");
+          return;
+        }
+
+        selectedPaymentMethod = paymentMethod;
       }
-      selectedPaymentMethod = paymentMethod;
       final body = {
         "lodge_id": lodgeId,
         "user_id": userId,
@@ -542,7 +538,8 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
         "balancePayment": (balancePayment != null && balancePayment != 0)
             ? balancePayment
             : 0,
-        "payment_method": selectedPaymentMethod!,
+        "payment_method": selectedPaymentMethod,
+        "current_time": currentTime,
       };
       final url = Uri.parse("$baseUrl/billings");
       final response = await http.post(
@@ -1026,7 +1023,7 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: royal,
-          title: const Text("Billing", style: TextStyle(color: Colors.white)),
+          title: const Text("Check Out", style: TextStyle(color: Colors.white)),
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             IconButton(
@@ -1073,7 +1070,7 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
                               children: [
                                 const SizedBox(height: 20),
                                 const Text(
-                                  "Generate bill for cancellation.\nView it as PDF and download.",
+                                  "Generate bill for check-out.\nView it as PDF and download.",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: royal,
@@ -1179,7 +1176,7 @@ class BillingDetailsPageState extends State<BillingDetailsPage> {
                       onPressed: submitting ? null : _bookRooms,
                       child: submitting
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Confirm Billing",
+                          : const Text("Confirm Check Out",
                           style: TextStyle(color: Colors.white)),
                     ),
                   ),

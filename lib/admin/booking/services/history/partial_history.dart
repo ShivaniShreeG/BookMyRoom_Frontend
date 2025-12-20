@@ -676,8 +676,6 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
   }
 
   Widget _paymentInfoSection(Map<String, dynamic> b) {
-    bool hasValue(dynamic val) => val != null && val.toString().trim().isNotEmpty;
-    bool isPaid = !hasValue(b['booking']["Balance"]) || b['booking']["Balance"].toString() == "0";
 
     return Stack(
       clipBehavior: Clip.none,
@@ -706,16 +704,6 @@ class _PartialCancelDetailsPageState extends State<PartialCancelDetailsPage> {
               const SizedBox(height: 10),
 
               _paymentRow("Total Amount", "₹${b['booking']["amount"]}"),
-              const SizedBox(height: 10),
-
-              _paymentRow(
-                isPaid ? "Paid" : "Advance",
-                "₹${b['booking']["advance"]}",
-              ),
-              const SizedBox(height: 10),
-
-              if (!isPaid && hasValue(b['booking']["Balance"]))
-                _paymentRow("Balance", "₹${b['booking']["Balance"]}"),
               const SizedBox(height: 10),
               _paymentRow("Booked At", formatDate(b['booking']['created_at'])),
             ],

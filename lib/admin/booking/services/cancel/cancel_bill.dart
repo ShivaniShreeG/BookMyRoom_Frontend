@@ -312,9 +312,7 @@ class _CancelBillPageState extends State<CancelBillPage> {
                   if (bookingDetails['specification']['number_of_rooms'] != null) "NUMBER OF ROOMS",
                   if (bookingDetails['baseamount'] != null) "BASE AMOUNT",
                   if (bookingDetails['gst'] != null) "GST",
-                  if (bookingDetails['amount'] != null) "TOTAL AMOUNT",
-                  if (bookingDetails['advance'] != null) "AMOUNT PAID",
-                  if (bookingDetails['Balance'] != null && bookingDetails['balance'] != 0) "BALANCE",
+                  if (bookingDetails['amount'] != null) "TOTAL AMOUNT RECEIVED",
                   if (bookingDetails['deposite'] != null && bookingDetails['deposite'] != 0) "DEPOSITE",
 
                 ].map((label) {
@@ -368,8 +366,6 @@ class _CancelBillPageState extends State<CancelBillPage> {
                   if (bookingDetails['baseamount'] != null) "Rs.${bookingDetails['baseamount']}",
                   if (bookingDetails['gst'] != null) "Rs.${bookingDetails['gst']}",
                   if (bookingDetails['amount'] != null) "Rs.${bookingDetails['amount']}",
-                  if (bookingDetails['advance'] != null) "Rs.${bookingDetails['advance']}",
-                  if (bookingDetails['Balance'] != null && bookingDetails['balance'] != 0) "Rs.${bookingDetails['Balance']}",
                   if (bookingDetails['deposite'] != null && bookingDetails['deposite'] != 0) "Rs.${bookingDetails['deposite']}",
                 ].map((amount) {
                   final isBalance = amount.contains(bookingDetails['Balance'].toString());
