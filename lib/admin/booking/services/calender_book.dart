@@ -22,6 +22,8 @@ class SelectRoomByCalendarPage extends StatefulWidget {
 
 class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
   int? lodgeId;
+  int days = 1;
+  final daysController = TextEditingController(text: "1");
 
   DateTime? checkIn;
   DateTime? checkOut;
@@ -170,138 +172,21 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     );
   }
 
-  Future<DateTime?> _pickDateTime(DateTime defaultDate) async {
-
-    final date = await showDatePicker(
-      context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDate: defaultDate,
-      builder: (context, child) {
-        final theme = Theme.of(context);
-
-        return Theme(
-          data: theme.copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: royal,
-              onPrimary: Colors.white,
-              onSurface: royal,
-            ),
-
-            inputDecorationTheme: InputDecorationTheme(
-              filled: false,
-              fillColor: Colors.transparent,
-
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: royal, width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: royal, width: 1.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-
-              labelStyle: const TextStyle(color: royal),
-              hintStyle: const TextStyle(color: royal),
-              suffixIconColor: royal,
-            ),
-
-            textTheme: theme.textTheme.copyWith(
-              bodySmall:const TextStyle(color: royal) ,
-              bodyMedium: const TextStyle(color: royal),
-              bodyLarge: const TextStyle(color: royal),
-              titleMedium: const TextStyle(color: royal),
-            ),
-
-            textSelectionTheme: const TextSelectionThemeData(
-              cursorColor: royal,
-              selectionColor: Colors.white,
-              selectionHandleColor: royal,
-            ),
-
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: royal,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (!mounted) return null;
-
-    if (date == null) return null;
-
+  Future<DateTime?> _pickTimeOnly(DateTime baseDate) async {
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: TimeOfDay.fromDateTime(baseDate),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            primaryColor: royal,
             colorScheme: const ColorScheme.light(
               primary: royal,
               onPrimary: Colors.white,
               onSurface: royal,
             ),
-
-            textTheme: Theme.of(context).textTheme.copyWith(
-              titleLarge: const TextStyle(
-                color: royal,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            textSelectionTheme: const TextSelectionThemeData(
-              cursorColor: royal,
-              selectionColor: royal,
-              selectionHandleColor: royal,
-            ),
-
-            inputDecorationTheme: InputDecorationTheme(
-              labelStyle: const TextStyle(color: royal),
-              hintStyle: const TextStyle(color: royal),
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: royal, width: 2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: royal, width: 1.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-
             timePickerTheme: TimePickerThemeData(
-              backgroundColor: Colors.white,
               dialHandColor: royal,
               dialBackgroundColor: royal.withValues(alpha: 0.08),
-              dialTextColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return Colors.white;
-                return royal;
-              }),
-              hourMinuteColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return royal.withValues(alpha: 0.15);
-                return royal.withValues(alpha: 0.1);
-              }),
-              hourMinuteTextColor: WidgetStateColor.resolveWith((states) => royal),
-              hourMinuteShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: royal, width: 1.5),
-              ),
-              dayPeriodColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return royal;
-                return royal.withValues(alpha: 0.1);
-              }),
-              dayPeriodTextColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return Colors.white;
-                return royal;
-              }),
-              dayPeriodBorderSide: const BorderSide(color: royal, width: 1.5),
-              dayPeriodShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
             ),
           ),
           child: child!,
@@ -312,9 +197,9 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
     if (time == null) return null;
 
     return DateTime(
-      date.year,
-      date.month,
-      date.day,
+      baseDate.year,
+      baseDate.month,
+      baseDate.day,
       time.hour,
       time.minute,
     );
@@ -379,7 +264,7 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                       backgroundColor: royal,
                     ),
                     onPressed: () async {
-                      final dt = await _pickDateTime(tempIn!);
+                      final dt = await _pickTimeOnly(tempIn!);
                       if (dt != null) {
                         update(() {
                           tempIn = dt;
@@ -395,11 +280,56 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
 
                   const SizedBox(height: 18),
 
-                  const Text("Check-Out",
-                      style: TextStyle(
-                          color: royal,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
+                  const Text(
+                    "No. of Days",
+                    style: TextStyle(
+                      color: royal,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  TextField(
+                    controller: daysController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    cursorColor: royal,
+                    style: TextStyle(color: royal),
+                    decoration: InputDecoration(
+                      hintText: "Enter days",
+                      hintStyle: TextStyle(color: royal.withValues(alpha: 0.7)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: royal,width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: royal, width: 2),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      final parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        update(() {
+                          days = parsed;
+                          tempOut = tempIn!.add(Duration(days: days));
+                        });
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    "Check-Out",
+                    style: TextStyle(
+                      color: royal,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+
                   const SizedBox(height: 6),
 
                   ElevatedButton(
@@ -407,7 +337,7 @@ class _SelectRoomByCalendarPageState extends State<SelectRoomByCalendarPage> {
                       backgroundColor: royal,
                     ),
                     onPressed: () async {
-                      final dt = await _pickDateTime(tempOut!);
+                      final dt = await _pickTimeOnly(tempOut!);
                       if (dt != null) {
                         update(() {
                           if (dt.isBefore(tempIn!)) {

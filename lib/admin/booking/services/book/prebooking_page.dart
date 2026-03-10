@@ -1286,15 +1286,15 @@ class _PreBookingPageState extends State<PreBookingPage> {
         for (var room in bookedRooms) {
           final name = room[0]?.toString() ?? '';
           final type = room[1]?.toString() ?? '';
-          final nums = List<String>.from(room[2] ?? []);
+          final count = (room[2] as List?)?.length ?? 0;
 
-          buffer.writeln("Room Type    : $type - $name");
-          if (nums.isNotEmpty) {
-            buffer.writeln("Room Numbers : ${nums.join(', ')}");
-          }
+          buffer.writeln("Room Type : $type");
+          buffer.writeln("Room Name : $name");
+          buffer.writeln("Rooms     : $count");
           buffer.writeln("");
         }
       }
+
 
       if (booking['numberofguest'] != null) {
         buffer.writeln("No. of Guests: ${booking['numberofguest']}");

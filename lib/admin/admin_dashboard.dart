@@ -11,7 +11,6 @@ import 'booking/services/charges_for_booking.dart';
 import 'booking/services/date_changing/booking_list.dart';
 import 'booking/services/cancel/cancel.dart';
 import 'booking/services/billing/billing.dart';
-import 'booking/services/availability_calendar.dart';
 import 'booking/services/view_facilitator.dart';
 import 'booking/accounts/add_income_page.dart';
 import 'booking/accounts/add_expense.dart';
@@ -122,7 +121,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
             SizedBox(height: 20 * boxScale),
             Align(
               alignment: Alignment.center,
-              child: _buildBookingServiceCard(
+              child: _buildBooKingCard(
+                  screenWidth),
+
+            ),
+            SizedBox(height: 20 * boxScale),
+            Align(
+              alignment: Alignment.center,
+              child: _buildCheckInCard(
+                  screenWidth),
+
+            ),
+            SizedBox(height: 20 * boxScale),
+            Align(
+              alignment: Alignment.center,
+              child: _buildHistoryCard(
+                  screenWidth),
+
+            ),
+            SizedBox(height: 20 * boxScale),
+            Align(
+              alignment: Alignment.center,
+              child: _buildFacilitatorCard(
                   screenWidth),
 
             ),
@@ -314,7 +334,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildBookingServiceCard(double screenWidth) {
+  Widget _buildBooKingCard(double screenWidth) {
     final double buttonSize = 70.0;
 
     return Card(
@@ -333,7 +353,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
                 Text(
-                  "Booking Service",
+                  "Booking",
                   style: TextStyle(
                     color: royal,
                     fontSize: 20,
@@ -365,19 +385,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
 
                 _buildManageButton(
-                  icon: Icons.check_circle,
-                  label: "Check In",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PreBookedListPage()),
-                    );
-                  },
-                  size: buttonSize,
-                ),
-
-                _buildManageButton(
                   icon: Icons.change_circle_outlined,
                   label: "Date Changing",
                   onTap: () {
@@ -398,6 +405,64 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       context,
                       MaterialPageRoute(
                           builder: (context) => CancelBookedPage()),
+                    );
+                  },
+                  size: buttonSize,
+                ),
+
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckInCard(double screenWidth) {
+    final double buttonSize = 70.0;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: royal, width: 1.5),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text(
+                  "Services",
+                  style: TextStyle(
+                    color: royal,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, color: royal, size: 40),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _buildManageButton(
+                  icon: Icons.check_circle,
+                  label: "Check In",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => PreBookedListPage()),
                     );
                   },
                   size: buttonSize,
@@ -429,18 +494,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   size: buttonSize,
                 ),
 
-                _buildManageButton(
-                  icon: Icons.search,
-                  label: "Date Availability",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => AvailabilityCalendarPage()),
-                    );
-                  },
-                  size: buttonSize,
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(double screenWidth) {
+    final double buttonSize = 70.0;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: royal, width: 1.5),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text(
+                  "History",
+                  style: TextStyle(
+                    color: royal,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                Icon(Icons.arrow_drop_down, color: royal, size: 40),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+
 
                 _buildManageButton(
                   icon: Icons.work_history_outlined,
@@ -480,6 +579,53 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   },
                   size: buttonSize,
                 ),
+
+
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFacilitatorCard(double screenWidth) {
+    final double buttonSize = 70.0;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: royal, width: 1.5),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text(
+                  "Facilitator",
+                  style: TextStyle(
+                    color: royal,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, color: royal, size: 40),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: [
 
                 _buildManageButton(
                   icon: Icons.domain_add,

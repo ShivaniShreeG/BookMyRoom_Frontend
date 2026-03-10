@@ -737,6 +737,30 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 
+  Widget _infoTextField(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            "$label:",
+            style: const TextStyle(fontWeight: FontWeight.bold, color: royal),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 4,
+          child: TextFormField(
+            readOnly: true,
+            initialValue: value,
+            style: const TextStyle(color: royal),
+            decoration: _inputDecoration(),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _personalInfoSection(Map<String, dynamic> b) {
     bool hasValue(dynamic val) =>
         val != null && val
@@ -826,30 +850,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             initialValue: value,
             textAlign: TextAlign.right,
             // Right-align the value
-            style: const TextStyle(color: royal),
-            decoration: _inputDecoration(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoTextField(String label, String value) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            "$label:",
-            style: const TextStyle(fontWeight: FontWeight.bold, color: royal),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 4,
-          child: TextFormField(
-            readOnly: true,
-            initialValue: value,
             style: const TextStyle(color: royal),
             decoration: _inputDecoration(),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../public/config.dart';
+import '../admin/manage/app_payment.dart';
 
 const Color royalblue = Color(0xFF376EA1);
 const Color royal = Color(0xFF19527A);
@@ -224,6 +225,38 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                           color: _dueColor ?? royal,
                           fontSize: 15,
                           height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 👉 CLICK HERE TO PAY
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AppPaymentPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.payment),
+                          label: const Text(
+                            "Click here to pay",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: _dueColor ?? royal,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ),
                     ],

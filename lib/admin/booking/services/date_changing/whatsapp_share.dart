@@ -164,8 +164,12 @@ class UpdatedBookingSummaryPage extends StatelessWidget {
                   ...oldRooms.map((room) {
                     final name = room[0]?.toString() ?? '';
                     final type = room[1]?.toString() ?? '';
-                    final nums = List<String>.from(room[2] ?? []);
-                    return buildLabelValueBooking("Room", "$type - $name (${nums.join(', ')})");
+                    final count = (room[2] as List?)?.length ?? 0;
+
+                    return buildLabelValueBooking(
+                      "Room",
+                      "$type - $name ($count room${count > 1 ? 's' : ''})",
+                    );
                   }),
                 ],
                 const SizedBox(height: 15),
@@ -184,9 +188,14 @@ class UpdatedBookingSummaryPage extends StatelessWidget {
                   ...newRooms.map((room) {
                     final name = room[0]?.toString() ?? '';
                     final type = room[1]?.toString() ?? '';
-                    final nums = List<String>.from(room[2] ?? []);
-                    return buildLabelValueBooking("Room", "$type - $name (${nums.join(', ')})");
+                    final count = (room[2] as List?)?.length ?? 0;
+
+                    return buildLabelValueBooking(
+                      "Room",
+                      "$type - $name ($count room${count > 1 ? 's' : ''})",
+                    );
                   }),
+
                 ],
                 const SizedBox(height: 20),
                 Center(

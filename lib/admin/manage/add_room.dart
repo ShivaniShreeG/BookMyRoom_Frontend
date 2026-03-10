@@ -287,7 +287,7 @@ class _RoomsPageState extends State<RoomsPage> {
                   onPressed: () => _editRoom(room),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, color: royal),
+                  icon: const Icon(Icons.delete, color: Colors.red),
                   tooltip: "Delete Room",
                   onPressed: () =>
                       _showDeleteDialog(room["id"], room["room_name"] ?? "-"),
@@ -347,6 +347,7 @@ class _RoomsPageState extends State<RoomsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               TextFormField(
                 controller: roomNameController,
                 decoration:  InputDecoration(
@@ -375,6 +376,7 @@ class _RoomsPageState extends State<RoomsPage> {
                 style: TextStyle(color: royal),
                 validator: (v) => v == null || v.isEmpty ? "Enter room name" : null,
               ),
+
               const SizedBox(height: 12),
 
               Column(
@@ -479,6 +481,7 @@ class _RoomsPageState extends State<RoomsPage> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 6),
 
               for (int i = 0; i < roomNumberControllers.length; i++)
@@ -534,7 +537,7 @@ class _RoomsPageState extends State<RoomsPage> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: royal),
+                        icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
                           setState(() {
                             roomNumberControllers.removeAt(i);
@@ -547,7 +550,7 @@ class _RoomsPageState extends State<RoomsPage> {
                 ),
 
               Center(
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: () {
                     setState(() {
                       final newController = TextEditingController();
@@ -560,11 +563,15 @@ class _RoomsPageState extends State<RoomsPage> {
                       roomFocusNodes.last.requestFocus();
                     });
                   },
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text("Add Room Number", style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(backgroundColor: royal),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: royal,
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(14),
+                  ),
+                  child: const Icon(Icons.add, color: Colors.white),
                 ),
               ),
+
               const SizedBox(height: 16),
 
               Row(

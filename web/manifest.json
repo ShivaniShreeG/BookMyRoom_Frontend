@@ -1,11 +1,11 @@
 {
-    "name": "frontend",
-    "short_name": "frontend",
+    "name": "Ramchin Lodge Management",
+    "short_name": "Lodge Management",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Ramchin Lodge Management System",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

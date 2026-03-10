@@ -78,8 +78,3 @@ dependencies {
 flutter {
     source = "../.."
 }
-
-
-flutter {
-    source = "../.."
-}

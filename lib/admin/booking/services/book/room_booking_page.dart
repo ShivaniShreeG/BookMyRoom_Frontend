@@ -680,6 +680,7 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
       ],
     );
   }
+
   Future<String?> _selectPaymentMethod() async {
     return await showDialog<String>(
       context: context,
@@ -1677,7 +1678,6 @@ class _RoomBookingPageState extends State<RoomBookingPage> {
       ],
     );
   }
-
 
   Widget _buildHallCard(Map<String, dynamic> hall) {
     return Container(
